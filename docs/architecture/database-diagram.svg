@@ -1,0 +1,650 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2992" height="1706" viewBox="0 0 2992 1706">
+<style>
+  text{font-family:'DejaVu Sans',sans-serif}
+  .title{font-size:24px;font-weight:700;fill:#1d2733}
+  .sub{font-size:14px;fill:#5a6675}
+  .tname{font-family:'DejaVu Sans Mono',monospace;font-size:15px;font-weight:700;fill:#fff}
+  .col{font-family:'DejaVu Sans Mono',monospace;font-size:13px;fill:#1d2733}
+  .note{font-size:12px;fill:#6b7684;text-anchor:end}
+  .badge{font-size:10px;font-weight:700;text-anchor:middle}
+  .uk{font-family:'DejaVu Sans Mono',monospace;font-size:11px;fill:#12703a}
+  .fk{font-family:'DejaVu Sans Mono',monospace;font-size:11px;fill:#1e46b4}
+  .rel{fill:none;stroke:#56657a;stroke-width:1.7}
+  .bus{fill:none;stroke:#0f7a86;stroke-width:2.2}
+  .card-lbl{font-size:13px;font-weight:700;fill:#b4231b}
+  .bl{fill:#0f7a86}
+  .mid{font-size:12.5px;font-style:italic;fill:#3c4a5c}
+  .buslbl{font-size:14px;font-weight:700;fill:#0f7a86}
+  .legt{font-size:16px;font-weight:700;fill:#1d2733}
+  .legx{font-size:13px;fill:#2c3746}
+</style>
+<rect width="2992" height="1706" fill="#ffffff"/>
+<text x="40" y="42" class="title">Radial Pulse database — 27 tables, keys and relationships</text>
+<text x="40" y="66" class="sub">After migration 0011 · every table has a primary key · links inside one clinic use two-column foreign keys</text>
+<polyline points="1271.0,118 1271.0,92 571.0,92 571.0,118" class="rel"/>
+<text x="1279.0" y="110" class="card-lbl">1</text>
+<text x="579.0" y="110" class="card-lbl">N</text>
+<text x="591.0" y="85" class="mid">1 : N  receives</text>
+<polyline points="1351.0,118 1351.0,92 2481.0,92 2481.0,118" class="rel"/>
+<text x="1359.0" y="110" class="card-lbl">0..1</text>
+<text x="2489.0" y="110" class="card-lbl">N</text>
+<text x="1991.0" y="85" class="mid">N : 1  optional login</text>
+<polyline points="1150,178 1102,178" class="rel"/>
+<text x="1142" y="172" class="card-lbl" text-anchor="end">1</text>
+<text x="1110" y="196" class="card-lbl" text-anchor="start">N</text>
+<text x="1110" y="216" class="mid">1 : N</text>
+<polyline points="2212,178 2260,178" class="rel"/>
+<text x="2220" y="172" class="card-lbl" text-anchor="start">1</text>
+<text x="2252" y="196" class="card-lbl" text-anchor="end">N</text>
+<text x="2220" y="216" class="mid">1 : N</text>
+<polyline points="1311.0,310 1311.0,383" class="rel"/>
+<text x="1319.0" y="326" class="card-lbl">1</text>
+<text x="1319.0" y="375" class="card-lbl">N</text>
+<polyline points="1251.0,310 1251.0,345 941.0,345 941.0,383" class="rel"/>
+<text x="949.0" y="375" class="card-lbl">N</text>
+<polyline points="1251.0,345 571.0,345 571.0,383" class="rel"/>
+<text x="579.0" y="375" class="card-lbl">N</text>
+<text x="1257.0" y="326" class="card-lbl">1</text>
+<text x="581.0" y="337" class="mid">users M : N clinics  (through the link tables)</text>
+<polyline points="941.0,575 941.0,625 1200,625 1200,719" class="rel"/>
+<text x="949.0" y="591" class="card-lbl">N</text>
+<text x="1208" y="711" class="card-lbl">1</text>
+<polyline points="571.0,578 571.0,649 1170,649 1170,719" class="rel"/>
+<text x="579.0" y="594" class="card-lbl">N</text>
+<text x="1178" y="711" class="card-lbl">1</text>
+<polyline points="1311.0,554 1311.0,719" class="rel"/>
+<text x="1319.0" y="570" class="card-lbl">N</text>
+<text x="1319.0" y="711" class="card-lbl">1</text>
+<polyline points="2051.0,214 2051.0,673 1752,673 1752,719" class="rel"/>
+<text x="2059.0" y="230" class="card-lbl">1</text>
+<text x="1760" y="711" class="card-lbl">N</text>
+<text x="2059.0" y="254" class="mid">1 : N  owns</text>
+<polyline points="2421.0,313 2421.0,383" class="rel"/>
+<text x="2429.0" y="329" class="card-lbl">1</text>
+<text x="2429.0" y="375" class="card-lbl">N</text>
+<text x="2431.0" y="357" class="mid">doctors M : N clinics</text>
+<polyline points="2421.0,599 2421.0,697 1802,697 1802,719" class="rel"/>
+<text x="2429.0" y="615" class="card-lbl">N</text>
+<text x="1810" y="711" class="card-lbl">1</text>
+<polyline points="1150,779 732,779" class="rel"/>
+<text x="1142" y="773" class="card-lbl" text-anchor="end">1</text>
+<text x="740" y="773" class="card-lbl" text-anchor="start">1</text>
+<text x="762" y="803" class="mid">1 : 1</text>
+<polyline points="1842,779 2260,779" class="rel"/>
+<text x="1850" y="773" class="card-lbl" text-anchor="start">1</text>
+<text x="2252" y="773" class="card-lbl" text-anchor="end">N</text>
+<text x="1882" y="803" class="mid">1 : N  files</text>
+<polyline points="2260,839 1842,839" class="rel"/>
+<text x="2252" y="833" class="card-lbl" text-anchor="end">0..1</text>
+<text x="1850" y="833" class="card-lbl" text-anchor="start">0..1</text>
+<text x="1882" y="863" class="mid">1 : 1  cover photo</text>
+<polyline points="2552,719 2552,701 2604,701 2604,769 2582,769" class="rel"/>
+<text x="2472" y="695" class="mid">1 : N  versions</text>
+<polyline points="2491.0,935 2491.0,1052" class="rel"/>
+<text x="2499.0" y="951" class="card-lbl">0..1</text>
+<text x="2499.0" y="1044" class="card-lbl">N</text>
+<text x="2501.0" y="969" class="mid">attachment</text>
+<polyline points="2582,905 2861.0,905 2861.0,1052" class="rel"/>
+<text x="2590" y="899" class="card-lbl" text-anchor="start">0..1</text>
+<text x="2869.0" y="1044" class="card-lbl">N</text>
+<text x="2871.0" y="923" class="mid">the PDF</text>
+<polyline class="bus" points="1496.0,962 1496.0,1010"/>
+<polyline class="bus" points="18,1010 2791.0,1010"/>
+<polyline class="bus" points="201.0,1010 201.0,1052"/>
+<text x="208.0" y="1046" class="card-lbl bl">N</text>
+<polyline class="bus" points="571.0,1010 571.0,1052"/>
+<text x="578.0" y="1046" class="card-lbl bl">N</text>
+<polyline class="bus" points="941.0,1010 941.0,1052"/>
+<text x="948.0" y="1046" class="card-lbl bl">N</text>
+<polyline class="bus" points="1311.0,1010 1311.0,1052"/>
+<text x="1318.0" y="1046" class="card-lbl bl">N</text>
+<polyline class="bus" points="1681.0,1010 1681.0,1052"/>
+<text x="1688.0" y="1046" class="card-lbl bl">N</text>
+<polyline class="bus" points="2051.0,1010 2051.0,1052"/>
+<text x="2058.0" y="1046" class="card-lbl bl">N</text>
+<polyline class="bus" points="2421.0,1010 2421.0,1052"/>
+<text x="2428.0" y="1046" class="card-lbl bl">N</text>
+<polyline class="bus" points="2791.0,1010 2791.0,1052"/>
+<text x="2798.0" y="1046" class="card-lbl bl">N</text>
+<text x="1520.0" y="978" class="buslbl">1 : N  every table below has clinic_id — each row belongs to ONE clinic</text>
+<polyline class="bus" points="18,1010 18,1365 2051.0,1365"/>
+<polyline class="bus" points="201.0,1365 201.0,1405"/>
+<text x="208.0" y="1399" class="card-lbl bl">N</text>
+<polyline class="bus" points="571.0,1365 571.0,1405"/>
+<text x="578.0" y="1399" class="card-lbl bl">N</text>
+<polyline class="bus" points="941.0,1365 941.0,1405"/>
+<text x="948.0" y="1399" class="card-lbl bl">N</text>
+<polyline class="bus" points="2051.0,1365 2051.0,1405"/>
+<text x="2058.0" y="1399" class="card-lbl bl">N</text>
+<polyline points="1311.0,1268 1311.0,1405" class="rel"/>
+<text x="1319.0" y="1284" class="card-lbl">1</text>
+<text x="1319.0" y="1397" class="card-lbl">N</text>
+<text x="1319.0" y="1361" class="mid">1 : N  sections</text>
+<polyline points="1472,1475 1520,1475" class="rel"/>
+<text x="1480" y="1469" class="card-lbl" text-anchor="start">1</text>
+<text x="1512" y="1493" class="card-lbl" text-anchor="end">N</text>
+<text x="1480" y="1513" class="mid">1 : N</text>
+<polyline points="1681.0,1405 1681.0,1292" class="rel"/>
+<text x="1689.0" y="1397" class="card-lbl">0..1</text>
+<text x="1689.0" y="1308" class="card-lbl">N</text>
+<text x="1691.0" y="1361" class="mid">Fix Now</text>
+<polyline points="1890,1122 1842,1122" class="rel"/>
+<text x="1882" y="1116" class="card-lbl" text-anchor="end">0..1</text>
+<text x="1850" y="1140" class="card-lbl" text-anchor="start">N</text>
+<text x="1850" y="1160" class="mid">1 : N</text>
+<polyline points="1401.0,1268 1401.0,1339 2731.0,1339 2731.0,1313" class="rel"/>
+<text x="1409.0" y="1284" class="card-lbl">0..1</text>
+<text x="2739.0" y="1329" class="card-lbl">N</text>
+<text x="2011.0" y="1333" class="mid">assessment 1 : N exports</text>
+<g><rect x="780" y="118" width="322" height="195" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M780,154 V125 Q780,118 787,118 H1095 Q1102,118 1102,125 V154 Z" fill="#2f5fc4"/>
+<text x="792" y="142" class="tname">notification_preferences</text>
+<rect x="790" y="159" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="802" y="171" class="badge" fill="#4a3500">PK</text>
+<text x="846" y="171" class="col" font-weight="700">id</text>
+<rect x="790" y="183" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="802" y="195" class="badge" fill="#1e46b4">FK</text>
+<text x="846" y="195" class="col">user_id</text>
+<text x="1092" y="195" class="note">whose switch</text>
+<text x="846" y="219" class="col">category</text>
+<text x="1092" y="219" class="note">kind</text>
+<text x="846" y="243" class="col">channel</text>
+<text x="1092" y="243" class="note">in_app / email</text>
+<text x="846" y="267" class="col">enabled</text>
+<text x="1092" y="267" class="note">on / off</text>
+<line x1="788" y1="280" x2="1094" y2="280" stroke="#e1e6ec"/>
+<text x="790" y="296" class="uk">UNIQUE (user_id, category, channel)</text>
+</g>
+<g><rect x="410" y="118" width="322" height="168" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M410,154 V125 Q410,118 417,118 H725 Q732,118 732,125 V154 Z" fill="#2f5fc4"/>
+<text x="422" y="142" class="tname">notifications</text>
+<rect x="420" y="159" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="432" y="171" class="badge" fill="#4a3500">PK</text>
+<text x="476" y="171" class="col" font-weight="700">id</text>
+<rect x="420" y="183" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="432" y="195" class="badge" fill="#1e46b4">FK</text>
+<text x="476" y="195" class="col">user_id</text>
+<text x="722" y="195" class="note">recipient</text>
+<rect x="420" y="207" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="432" y="219" class="badge" fill="#1e46b4">FK</text>
+<text x="476" y="219" class="col">clinic_id</text>
+<text x="722" y="219" class="note">optional</text>
+<text x="476" y="243" class="col">title</text>
+<text x="476" y="267" class="col">read_at</text>
+</g>
+<g><rect x="1150" y="118" width="322" height="192" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M1150,154 V125 Q1150,118 1157,118 H1465 Q1472,118 1472,125 V154 Z" fill="#2f5fc4"/>
+<text x="1162" y="142" class="tname">users</text>
+<rect x="1160" y="159" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="1172" y="171" class="badge" fill="#4a3500">PK</text>
+<text x="1216" y="171" class="col" font-weight="700">id</text>
+<text x="1462" y="171" class="note">person</text>
+<rect x="1160" y="183" width="24" height="16" rx="4" fill="#d5f3e1"/>
+<text x="1172" y="195" class="badge" fill="#12703a">UK</text>
+<text x="1216" y="195" class="col">email</text>
+<text x="1462" y="195" class="note">login email</text>
+<rect x="1160" y="207" width="24" height="16" rx="4" fill="#d5f3e1"/>
+<text x="1172" y="219" class="badge" fill="#12703a">UK</text>
+<text x="1216" y="219" class="col">cognito_sub</text>
+<text x="1462" y="219" class="note">Google login</text>
+<text x="1216" y="243" class="col">platform_role</text>
+<text x="1462" y="243" class="note">admin / DSM / clinic</text>
+<text x="1216" y="267" class="col">full_name</text>
+<text x="1216" y="291" class="col">is_active</text>
+<text x="1462" y="291" class="note">can log in?</text>
+</g>
+<g><rect x="1890" y="118" width="322" height="96" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M1890,154 V125 Q1890,118 1897,118 H2205 Q2212,118 2212,125 V154 Z" fill="#0f7a86"/>
+<text x="1902" y="142" class="tname">organizations</text>
+<rect x="1900" y="159" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="1912" y="171" class="badge" fill="#4a3500">PK</text>
+<text x="1956" y="171" class="col" font-weight="700">id</text>
+<text x="2202" y="171" class="note">business</text>
+<text x="1956" y="195" class="col">name</text>
+<text x="2202" y="195" class="note">e.g. Smile Group</text>
+</g>
+<g><rect x="2260" y="118" width="322" height="195" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M2260,154 V125 Q2260,118 2267,118 H2575 Q2582,118 2582,125 V154 Z" fill="#0f7a86"/>
+<text x="2272" y="142" class="tname">practitioners</text>
+<rect x="2270" y="159" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="2282" y="171" class="badge" fill="#4a3500">PK</text>
+<text x="2326" y="171" class="col" font-weight="700">id</text>
+<text x="2572" y="171" class="note">the doctor</text>
+<rect x="2270" y="183" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="2282" y="195" class="badge" fill="#1e46b4">FK</text>
+<text x="2326" y="195" class="col">organization_id</text>
+<text x="2572" y="195" class="note">business</text>
+<rect x="2270" y="207" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="2282" y="219" class="badge" fill="#1e46b4">FK</text>
+<text x="2326" y="219" class="col">user_id</text>
+<text x="2572" y="219" class="note">optional login</text>
+<text x="2326" y="243" class="col">full_name</text>
+<text x="2326" y="267" class="col">registration_number</text>
+<line x1="2268" y1="280" x2="2574" y2="280" stroke="#e1e6ec"/>
+<text x="2270" y="296" class="uk">UNIQUE (organization_id, registration_number)</text>
+</g>
+<g><rect x="2630" y="118" width="322" height="171" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M2630,154 V125 Q2630,118 2637,118 H2945 Q2952,118 2952,125 V154 Z" fill="#5c6878"/>
+<text x="2642" y="142" class="tname">platform_settings</text>
+<rect x="2640" y="159" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="2652" y="171" class="badge" fill="#4a3500">PK</text>
+<text x="2696" y="171" class="col" font-weight="700">id</text>
+<text x="2942" y="171" class="note">always 1</text>
+<text x="2696" y="195" class="col">organization_name</text>
+<text x="2696" y="219" class="col">support_email</text>
+<text x="2696" y="243" class="col">timezone</text>
+<text x="2942" y="243" class="note">Asia/Kolkata</text>
+<line x1="2638" y1="256" x2="2944" y2="256" stroke="#e1e6ec"/>
+<text x="2640" y="272" class="uk">single row</text>
+</g>
+<g><rect x="410" y="383" width="322" height="195" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M410,419 V390 Q410,383 417,383 H725 Q732,383 732,390 V419 Z" fill="#2f5fc4"/>
+<text x="422" y="407" class="tname">clinic_memberships</text>
+<rect x="420" y="424" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="432" y="436" class="badge" fill="#4a3500">PK</text>
+<text x="476" y="436" class="col" font-weight="700">id</text>
+<rect x="420" y="448" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="432" y="460" class="badge" fill="#1e46b4">FK</text>
+<text x="476" y="460" class="col">clinic_id</text>
+<rect x="420" y="472" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="432" y="484" class="badge" fill="#1e46b4">FK</text>
+<text x="476" y="484" class="col">user_id</text>
+<text x="722" y="484" class="note">clinic person</text>
+<text x="476" y="508" class="col">role</text>
+<text x="722" y="508" class="note">Clinic Admin / Team</text>
+<text x="476" y="532" class="col">is_active</text>
+<line x1="418" y1="545" x2="724" y2="545" stroke="#e1e6ec"/>
+<text x="420" y="561" class="uk">UNIQUE (clinic_id, user_id)</text>
+</g>
+<g><rect x="780" y="383" width="322" height="192" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M780,419 V390 Q780,383 787,383 H1095 Q1102,383 1102,390 V419 Z" fill="#2f5fc4"/>
+<text x="792" y="407" class="tname">clinic_assignments</text>
+<rect x="790" y="424" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="802" y="436" class="badge" fill="#4a3500">PK</text>
+<text x="846" y="436" class="col" font-weight="700">id</text>
+<rect x="790" y="448" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="802" y="460" class="badge" fill="#1e46b4">FK</text>
+<text x="846" y="460" class="col">clinic_id</text>
+<rect x="790" y="472" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="802" y="484" class="badge" fill="#1e46b4">FK</text>
+<text x="846" y="484" class="col">user_id</text>
+<text x="1092" y="484" class="note">the DSM</text>
+<text x="846" y="508" class="col">is_active</text>
+<line x1="788" y1="521" x2="1094" y2="521" stroke="#e1e6ec"/>
+<text x="790" y="537" class="uk">UNIQUE (clinic_id, user_id)</text>
+<text x="790" y="558" class="uk">UNIQUE (clinic_id) while active</text>
+</g>
+<g><rect x="1150" y="383" width="322" height="171" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M1150,419 V390 Q1150,383 1157,383 H1465 Q1472,383 1472,390 V419 Z" fill="#b0386f"/>
+<text x="1162" y="407" class="tname">chat_read_states</text>
+<rect x="1160" y="424" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="1172" y="436" class="badge" fill="#4a3500">PK</text>
+<text x="1216" y="436" class="col" font-weight="700">id</text>
+<rect x="1160" y="448" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="1172" y="460" class="badge" fill="#1e46b4">FK</text>
+<text x="1216" y="460" class="col">clinic_id</text>
+<rect x="1160" y="472" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="1172" y="484" class="badge" fill="#1e46b4">FK</text>
+<text x="1216" y="484" class="col">user_id</text>
+<text x="1216" y="508" class="col">last_read_at</text>
+<line x1="1158" y1="521" x2="1464" y2="521" stroke="#e1e6ec"/>
+<text x="1160" y="537" class="uk">UNIQUE (clinic_id, user_id)</text>
+</g>
+<g><rect x="2260" y="383" width="322" height="216" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M2260,419 V390 Q2260,383 2267,383 H2575 Q2582,383 2582,390 V419 Z" fill="#0f7a86"/>
+<text x="2272" y="407" class="tname">clinic_practitioners</text>
+<rect x="2270" y="424" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="2282" y="436" class="badge" fill="#4a3500">PK</text>
+<text x="2326" y="436" class="col" font-weight="700">id</text>
+<rect x="2270" y="448" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="2282" y="460" class="badge" fill="#1e46b4">FK</text>
+<text x="2326" y="460" class="col">clinic_id</text>
+<text x="2572" y="460" class="note">the branch</text>
+<rect x="2270" y="472" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="2282" y="484" class="badge" fill="#1e46b4">FK</text>
+<text x="2326" y="484" class="col">practitioner_id</text>
+<text x="2572" y="484" class="note">the doctor</text>
+<text x="2326" y="508" class="col">is_primary</text>
+<text x="2572" y="508" class="note">main doctor?</text>
+<text x="2326" y="532" class="col">is_active</text>
+<line x1="2268" y1="545" x2="2574" y2="545" stroke="#e1e6ec"/>
+<text x="2270" y="561" class="uk">UNIQUE (clinic_id, practitioner_id)</text>
+<text x="2270" y="582" class="uk">UNIQUE (clinic_id) main + active</text>
+</g>
+<g><rect x="410" y="719" width="322" height="144" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M410,755 V726 Q410,719 417,719 H725 Q732,719 732,726 V755 Z" fill="#0f7a86"/>
+<text x="422" y="743" class="tname">clinic_profiles</text>
+<rect x="420" y="760" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="432" y="772" class="badge" fill="#4a3500">PK</text>
+<rect x="447" y="760" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="459" y="772" class="badge" fill="#1e46b4">FK</text>
+<text x="477" y="772" class="col" font-weight="700">clinic_id</text>
+<text x="722" y="772" class="note">1 per clinic</text>
+<text x="476" y="796" class="col">brand</text>
+<text x="476" y="820" class="col">services</text>
+<text x="476" y="844" class="col">version</text>
+</g>
+<g><rect x="1150" y="719" width="692" height="243" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M1150,755 V726 Q1150,719 1157,719 H1835 Q1842,719 1842,726 V755 Z" fill="#0f7a86"/>
+<text x="1162" y="743" class="tname">clinics   (the tenant)</text>
+<rect x="1160" y="760" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="1172" y="772" class="badge" fill="#4a3500">PK</text>
+<text x="1216" y="772" class="col" font-weight="700">id</text>
+<text x="1832" y="772" class="note">the clinic</text>
+<rect x="1160" y="784" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="1172" y="796" class="badge" fill="#1e46b4">FK</text>
+<text x="1216" y="796" class="col">organization_id</text>
+<text x="1832" y="796" class="note">owner business</text>
+<rect x="1160" y="808" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="1172" y="820" class="badge" fill="#1e46b4">FK</text>
+<text x="1216" y="820" class="col">cover_asset_id</text>
+<text x="1832" y="820" class="note">cover photo</text>
+<text x="1216" y="844" class="col">name</text>
+<text x="1216" y="868" class="col">stage</text>
+<text x="1832" y="868" class="note">5 steps: New lead ... Customer</text>
+<text x="1216" y="892" class="col">is_active</text>
+<text x="1832" y="892" class="note">false = archived</text>
+<text x="1216" y="916" class="col">archived_reason</text>
+<text x="1832" y="916" class="note">why it said no</text>
+<line x1="1158" y1="929" x2="1834" y2="929" stroke="#e1e6ec"/>
+<text x="1160" y="945" class="fk">FK (cover_asset_id, id) → assets (id, clinic_id)</text>
+</g>
+<g><rect x="2260" y="719" width="322" height="216" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M2260,755 V726 Q2260,719 2267,719 H2575 Q2582,719 2582,726 V755 Z" fill="#3d6b4f"/>
+<text x="2272" y="743" class="tname">assets</text>
+<rect x="2270" y="760" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="2282" y="772" class="badge" fill="#4a3500">PK</text>
+<text x="2326" y="772" class="col" font-weight="700">id</text>
+<text x="2572" y="772" class="note">a file</text>
+<rect x="2270" y="784" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="2282" y="796" class="badge" fill="#1e46b4">FK</text>
+<text x="2326" y="796" class="col">clinic_id</text>
+<rect x="2270" y="808" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="2282" y="820" class="badge" fill="#1e46b4">FK</text>
+<text x="2326" y="820" class="col">previous_version_id</text>
+<rect x="2270" y="832" width="24" height="16" rx="4" fill="#d5f3e1"/>
+<text x="2282" y="844" class="badge" fill="#12703a">UK</text>
+<text x="2326" y="844" class="col">storage_key</text>
+<text x="2572" y="844" class="note">S3 key</text>
+<text x="2326" y="868" class="col">kind</text>
+<text x="2572" y="868" class="note">photo, pdf ...</text>
+<line x1="2268" y1="881" x2="2574" y2="881" stroke="#e1e6ec"/>
+<text x="2270" y="897" class="uk">UNIQUE (id, clinic_id)</text>
+<text x="2270" y="918" class="fk">FK (previous_version_id, clinic_id) → assets</text>
+</g>
+<g><rect x="40" y="1052" width="322" height="168" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M40,1088 V1059 Q40,1052 47,1052 H355 Q362,1052 362,1059 V1088 Z" fill="#0f7a86"/>
+<text x="52" y="1076" class="tname">clinic_stage_history</text>
+<rect x="50" y="1093" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="62" y="1105" class="badge" fill="#4a3500">PK</text>
+<text x="106" y="1105" class="col" font-weight="700">id</text>
+<rect x="50" y="1117" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="62" y="1129" class="badge" fill="#1e46b4">FK</text>
+<text x="106" y="1129" class="col">clinic_id</text>
+<text x="106" y="1153" class="col">from_stage → to_stage</text>
+<rect x="50" y="1165" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="62" y="1177" class="badge" fill="#1e46b4">FK</text>
+<text x="106" y="1177" class="col">changed_by_user_id</text>
+<text x="352" y="1177" class="note">who</text>
+<text x="106" y="1201" class="col">changed_at</text>
+</g>
+<g><rect x="410" y="1052" width="322" height="144" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M410,1088 V1059 Q410,1052 417,1052 H725 Q732,1052 732,1059 V1088 Z" fill="#0f7a86"/>
+<text x="422" y="1076" class="tname">consent_records</text>
+<rect x="420" y="1093" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="432" y="1105" class="badge" fill="#4a3500">PK</text>
+<text x="476" y="1105" class="col" font-weight="700">id</text>
+<rect x="420" y="1117" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="432" y="1129" class="badge" fill="#1e46b4">FK</text>
+<text x="476" y="1129" class="col">clinic_id</text>
+<text x="476" y="1153" class="col">consent_type</text>
+<text x="476" y="1177" class="col">granted</text>
+<text x="722" y="1177" class="note">yes / no</text>
+</g>
+<g><rect x="780" y="1052" width="322" height="195" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M780,1088 V1059 Q780,1052 787,1052 H1095 Q1102,1052 1102,1059 V1088 Z" fill="#a4650f"/>
+<text x="792" y="1076" class="tname">presence_profiles</text>
+<rect x="790" y="1093" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="802" y="1105" class="badge" fill="#4a3500">PK</text>
+<text x="846" y="1105" class="col" font-weight="700">id</text>
+<rect x="790" y="1117" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="802" y="1129" class="badge" fill="#1e46b4">FK</text>
+<text x="846" y="1129" class="col">clinic_id</text>
+<text x="846" y="1153" class="col">platform</text>
+<text x="1092" y="1153" class="note">google, insta ...</text>
+<text x="846" y="1177" class="col">url</text>
+<text x="846" y="1201" class="col">verification</text>
+<text x="1092" y="1201" class="note">really theirs?</text>
+<line x1="788" y1="1214" x2="1094" y2="1214" stroke="#e1e6ec"/>
+<text x="790" y="1230" class="uk">UNIQUE (clinic_id, platform, url)</text>
+</g>
+<g><rect x="1150" y="1052" width="322" height="216" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M1150,1088 V1059 Q1150,1052 1157,1052 H1465 Q1472,1052 1472,1059 V1088 Z" fill="#a4650f"/>
+<text x="1162" y="1076" class="tname">assessments</text>
+<rect x="1160" y="1093" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="1172" y="1105" class="badge" fill="#4a3500">PK</text>
+<text x="1216" y="1105" class="col" font-weight="700">id</text>
+<text x="1462" y="1105" class="note">a report</text>
+<rect x="1160" y="1117" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="1172" y="1129" class="badge" fill="#1e46b4">FK</text>
+<text x="1216" y="1129" class="col">clinic_id</text>
+<text x="1216" y="1153" class="col">sequence</text>
+<text x="1462" y="1153" class="note">1st, 2nd ...</text>
+<text x="1216" y="1177" class="col">overall_score</text>
+<text x="1462" y="1177" class="note">78 / 100</text>
+<text x="1216" y="1201" class="col">publication_state</text>
+<text x="1462" y="1201" class="note">clinic can see?</text>
+<line x1="1158" y1="1214" x2="1464" y2="1214" stroke="#e1e6ec"/>
+<text x="1160" y="1230" class="uk">UNIQUE (clinic_id, sequence)</text>
+<text x="1160" y="1251" class="uk">UNIQUE (id, clinic_id)</text>
+</g>
+<g><rect x="1520" y="1052" width="322" height="240" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M1520,1088 V1059 Q1520,1052 1527,1052 H1835 Q1842,1052 1842,1059 V1088 Z" fill="#6c43b5"/>
+<text x="1532" y="1076" class="tname">work_items</text>
+<rect x="1530" y="1093" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="1542" y="1105" class="badge" fill="#4a3500">PK</text>
+<text x="1586" y="1105" class="col" font-weight="700">id</text>
+<text x="1832" y="1105" class="note">a task</text>
+<rect x="1530" y="1117" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="1542" y="1129" class="badge" fill="#1e46b4">FK</text>
+<text x="1586" y="1129" class="col">clinic_id</text>
+<rect x="1530" y="1141" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="1542" y="1153" class="badge" fill="#1e46b4">FK</text>
+<text x="1586" y="1153" class="col">source_finding_id</text>
+<text x="1832" y="1153" class="note">Fix Now</text>
+<rect x="1530" y="1165" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="1542" y="1177" class="badge" fill="#1e46b4">FK</text>
+<text x="1586" y="1177" class="col">approval_id</text>
+<text x="1586" y="1201" class="col">finding_code</text>
+<text x="1586" y="1225" class="col">status</text>
+<text x="1832" y="1225" class="note">to do ... done</text>
+<line x1="1528" y1="1238" x2="1834" y2="1238" stroke="#e1e6ec"/>
+<text x="1530" y="1254" class="uk">UNIQUE (clinic_id, finding_code) while open</text>
+<text x="1530" y="1275" class="fk">FK (approval_id, clinic_id) → approvals</text>
+</g>
+<g><rect x="1890" y="1052" width="322" height="216" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M1890,1088 V1059 Q1890,1052 1897,1052 H2205 Q2212,1052 2212,1059 V1088 Z" fill="#6c43b5"/>
+<text x="1902" y="1076" class="tname">approvals</text>
+<rect x="1900" y="1093" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="1912" y="1105" class="badge" fill="#4a3500">PK</text>
+<text x="1956" y="1105" class="col" font-weight="700">id</text>
+<rect x="1900" y="1117" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="1912" y="1129" class="badge" fill="#1e46b4">FK</text>
+<text x="1956" y="1129" class="col">clinic_id</text>
+<text x="1956" y="1153" class="col">resource_type</text>
+<text x="2202" y="1153" class="note">what is reviewed</text>
+<text x="1956" y="1177" class="col">resource_id</text>
+<text x="2202" y="1177" class="note">report / file</text>
+<text x="1956" y="1201" class="col">state</text>
+<text x="2202" y="1201" class="note">draft ... approved</text>
+<line x1="1898" y1="1214" x2="2204" y2="1214" stroke="#e1e6ec"/>
+<text x="1900" y="1230" class="uk">UNIQUE (resource_type, resource_id)</text>
+<text x="1900" y="1251" class="uk">UNIQUE (id, clinic_id)</text>
+</g>
+<g><rect x="2260" y="1052" width="322" height="195" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M2260,1088 V1059 Q2260,1052 2267,1052 H2575 Q2582,1052 2582,1059 V1088 Z" fill="#b0386f"/>
+<text x="2272" y="1076" class="tname">chat_messages</text>
+<rect x="2270" y="1093" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="2282" y="1105" class="badge" fill="#4a3500">PK</text>
+<text x="2326" y="1105" class="col" font-weight="700">id</text>
+<rect x="2270" y="1117" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="2282" y="1129" class="badge" fill="#1e46b4">FK</text>
+<text x="2326" y="1129" class="col">clinic_id</text>
+<rect x="2270" y="1141" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="2282" y="1153" class="badge" fill="#1e46b4">FK</text>
+<text x="2326" y="1153" class="col">attachment_asset_id</text>
+<text x="2572" y="1153" class="note">file</text>
+<text x="2326" y="1177" class="col">sender_side</text>
+<text x="2572" y="1177" class="note">us / clinic</text>
+<text x="2326" y="1201" class="col">body</text>
+<text x="2572" y="1201" class="note">the text</text>
+<line x1="2268" y1="1214" x2="2574" y2="1214" stroke="#e1e6ec"/>
+<text x="2270" y="1230" class="fk">FK (attachment_asset_id, clinic_id) → assets</text>
+</g>
+<g><rect x="2630" y="1052" width="322" height="261" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M2630,1088 V1059 Q2630,1052 2637,1052 H2945 Q2952,1052 2952,1059 V1088 Z" fill="#3d6b4f"/>
+<text x="2642" y="1076" class="tname">report_artifacts</text>
+<rect x="2640" y="1093" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="2652" y="1105" class="badge" fill="#4a3500">PK</text>
+<text x="2696" y="1105" class="col" font-weight="700">id</text>
+<rect x="2640" y="1117" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="2652" y="1129" class="badge" fill="#1e46b4">FK</text>
+<text x="2696" y="1129" class="col">clinic_id</text>
+<rect x="2640" y="1141" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="2652" y="1153" class="badge" fill="#1e46b4">FK</text>
+<text x="2696" y="1153" class="col">assessment_id</text>
+<rect x="2640" y="1165" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="2652" y="1177" class="badge" fill="#1e46b4">FK</text>
+<text x="2696" y="1177" class="col">asset_id</text>
+<text x="2942" y="1177" class="note">the PDF</text>
+<text x="2696" y="1201" class="col">report_key</text>
+<text x="2696" y="1225" class="col">version</text>
+<line x1="2638" y1="1238" x2="2944" y2="1238" stroke="#e1e6ec"/>
+<text x="2640" y="1254" class="uk">UNIQUE (clinic_id, report_key, version)</text>
+<text x="2640" y="1275" class="fk">FK (assessment_id, clinic_id) → assessments</text>
+<text x="2640" y="1296" class="fk">FK (asset_id, clinic_id) → assets</text>
+</g>
+<g><rect x="40" y="1405" width="322" height="144" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M40,1441 V1412 Q40,1405 47,1405 H355 Q362,1405 362,1412 V1441 Z" fill="#5c6878"/>
+<text x="52" y="1429" class="tname">background_jobs</text>
+<rect x="50" y="1446" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="62" y="1458" class="badge" fill="#4a3500">PK</text>
+<text x="106" y="1458" class="col" font-weight="700">id</text>
+<rect x="50" y="1470" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="62" y="1482" class="badge" fill="#1e46b4">FK</text>
+<text x="106" y="1482" class="col">clinic_id</text>
+<text x="106" y="1506" class="col">job_type</text>
+<text x="106" y="1530" class="col">status</text>
+</g>
+<g><rect x="410" y="1405" width="322" height="195" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M410,1441 V1412 Q410,1405 417,1405 H725 Q732,1405 732,1412 V1441 Z" fill="#5c6878"/>
+<text x="422" y="1429" class="tname">audit_events</text>
+<rect x="420" y="1446" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="432" y="1458" class="badge" fill="#4a3500">PK</text>
+<text x="476" y="1458" class="col" font-weight="700">id</text>
+<rect x="420" y="1470" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="432" y="1482" class="badge" fill="#1e46b4">FK</text>
+<text x="476" y="1482" class="col">clinic_id</text>
+<text x="722" y="1482" class="note">optional</text>
+<rect x="420" y="1494" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="432" y="1506" class="badge" fill="#1e46b4">FK</text>
+<text x="476" y="1506" class="col">actor_user_id</text>
+<text x="722" y="1506" class="note">who</text>
+<text x="476" y="1530" class="col">action</text>
+<text x="722" y="1530" class="note">what happened</text>
+<text x="476" y="1554" class="col">occurred_at</text>
+<line x1="418" y1="1567" x2="724" y2="1567" stroke="#e1e6ec"/>
+<text x="420" y="1583" class="uk">never edited or deleted</text>
+</g>
+<g><rect x="780" y="1405" width="322" height="168" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M780,1441 V1412 Q780,1405 787,1405 H1095 Q1102,1405 1102,1412 V1441 Z" fill="#a4650f"/>
+<text x="792" y="1429" class="tname">metric_snapshots</text>
+<rect x="790" y="1446" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="802" y="1458" class="badge" fill="#4a3500">PK</text>
+<text x="846" y="1458" class="col" font-weight="700">id</text>
+<rect x="790" y="1470" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="802" y="1482" class="badge" fill="#1e46b4">FK</text>
+<text x="846" y="1482" class="col">clinic_id</text>
+<text x="846" y="1506" class="col">metric_key</text>
+<text x="1092" y="1506" class="note">followers ...</text>
+<text x="846" y="1530" class="col">value_number</text>
+<text x="1092" y="1530" class="note">5432</text>
+<text x="846" y="1554" class="col">fetched_at</text>
+</g>
+<g><rect x="1150" y="1405" width="322" height="237" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M1150,1441 V1412 Q1150,1405 1157,1405 H1465 Q1472,1405 1472,1412 V1441 Z" fill="#a4650f"/>
+<text x="1162" y="1429" class="tname">assessment_components</text>
+<rect x="1160" y="1446" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="1172" y="1458" class="badge" fill="#4a3500">PK</text>
+<text x="1216" y="1458" class="col" font-weight="700">id</text>
+<text x="1462" y="1458" class="note">a section</text>
+<rect x="1160" y="1470" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="1172" y="1482" class="badge" fill="#1e46b4">FK</text>
+<text x="1216" y="1482" class="col">assessment_id</text>
+<rect x="1160" y="1494" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="1172" y="1506" class="badge" fill="#1e46b4">FK</text>
+<text x="1216" y="1506" class="col">clinic_id</text>
+<text x="1216" y="1530" class="col">key</text>
+<text x="1462" y="1530" class="note">6 sections</text>
+<text x="1216" y="1554" class="col">score</text>
+<line x1="1158" y1="1567" x2="1464" y2="1567" stroke="#e1e6ec"/>
+<text x="1160" y="1583" class="uk">UNIQUE (assessment_id, key)</text>
+<text x="1160" y="1604" class="uk">UNIQUE (id, assessment_id)</text>
+<text x="1160" y="1625" class="fk">FK (assessment_id, clinic_id) → assessments</text>
+</g>
+<g><rect x="1520" y="1405" width="322" height="261" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M1520,1441 V1412 Q1520,1405 1527,1405 H1835 Q1842,1405 1842,1412 V1441 Z" fill="#a4650f"/>
+<text x="1532" y="1429" class="tname">assessment_findings</text>
+<rect x="1530" y="1446" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="1542" y="1458" class="badge" fill="#4a3500">PK</text>
+<text x="1586" y="1458" class="col" font-weight="700">id</text>
+<text x="1832" y="1458" class="note">a problem</text>
+<rect x="1530" y="1470" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="1542" y="1482" class="badge" fill="#1e46b4">FK</text>
+<text x="1586" y="1482" class="col">component_id</text>
+<rect x="1530" y="1494" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="1542" y="1506" class="badge" fill="#1e46b4">FK</text>
+<text x="1586" y="1506" class="col">assessment_id</text>
+<rect x="1530" y="1518" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="1542" y="1530" class="badge" fill="#1e46b4">FK</text>
+<text x="1586" y="1530" class="col">clinic_id</text>
+<text x="1586" y="1554" class="col">code</text>
+<text x="1586" y="1578" class="col">priority</text>
+<text x="1832" y="1578" class="note">high / medium ...</text>
+<line x1="1528" y1="1591" x2="1834" y2="1591" stroke="#e1e6ec"/>
+<text x="1530" y="1607" class="uk">UNIQUE (component_id, code)</text>
+<text x="1530" y="1628" class="fk">FK (component_id, assessment_id) → sections</text>
+<text x="1530" y="1649" class="fk">FK (assessment_id, clinic_id) → assessments</text>
+</g>
+<g><rect x="1890" y="1405" width="322" height="195" rx="7" fill="#fff" stroke="#c9d1db" stroke-width="1.2"/>
+<path d="M1890,1441 V1412 Q1890,1405 1897,1405 H2205 Q2212,1405 2212,1412 V1441 Z" fill="#b0386f"/>
+<text x="1902" y="1429" class="tname">platform_connections</text>
+<rect x="1900" y="1446" width="24" height="16" rx="4" fill="#f6c945"/>
+<text x="1912" y="1458" class="badge" fill="#4a3500">PK</text>
+<text x="1956" y="1458" class="col" font-weight="700">id</text>
+<rect x="1900" y="1470" width="24" height="16" rx="4" fill="#dbe6ff"/>
+<text x="1912" y="1482" class="badge" fill="#1e46b4">FK</text>
+<text x="1956" y="1482" class="col">clinic_id</text>
+<text x="1956" y="1506" class="col">platform</text>
+<text x="2202" y="1506" class="note">instagram ...</text>
+<text x="1956" y="1530" class="col">status</text>
+<text x="1956" y="1554" class="col">secret_ref</text>
+<text x="2202" y="1554" class="note">tokens stay in AWS</text>
+<line x1="1898" y1="1567" x2="2204" y2="1567" stroke="#e1e6ec"/>
+<text x="1900" y="1583" class="uk">UNIQUE (clinic_id, platform)</text>
+</g>
+<rect x="2260" y="1405" width="692" height="261" rx="7" fill="#f7f9fb" stroke="#c9d1db"/>
+<text x="2274" y="1431" class="legt">How to read this</text>
+<rect x="2274" y="1447" width="24" height="16" rx="4" fill="#f6c945"/><text x="2286" y="1459" class="badge" fill="#4a3500">PK</text>
+<text x="2306" y="1459" class="legx">primary key: identifies the row</text>
+<rect x="2274" y="1471" width="24" height="16" rx="4" fill="#dbe6ff"/><text x="2286" y="1483" class="badge" fill="#1e46b4">FK</text>
+<text x="2306" y="1483" class="legx">foreign key: points at another table</text>
+<rect x="2274" y="1495" width="24" height="16" rx="4" fill="#d5f3e1"/><text x="2286" y="1507" class="badge" fill="#12703a">UK</text>
+<text x="2306" y="1507" class="legx">unique key: never repeats</text>
+<text x="2274" y="1539" class="uk">UNIQUE (a, b) = these columns TOGETHER never repeat (composite key)</text>
+<text x="2274" y="1561" class="fk">FK (a, b) → t = two-column link: the parent must be in the SAME clinic</text>
+<text x="2274" y="1583" class="legx">1 / N / 0..1 at the line ends = how many rows on each side</text>
+<text x="2274" y="1605" class="legx">1 : 1 one to one · 1 : N one to many · M : N many to many (link table)</text>
+<text x="2274" y="1627" class="legx">Every table also has created_at / updated_at. *_by_user_id columns</text>
+<text x="2274" y="1649" class="legx">(who did it) point at users; those lines are not drawn.</text>
+</svg>

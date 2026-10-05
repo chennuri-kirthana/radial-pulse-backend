@@ -1,0 +1,198 @@
+# Continuous integration. Runs on every pull request and on main. Never deploys.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  # --------------------------------------------------------------- lint + types + fast tests
+  checks:
+    name: Lint · types · fast tests (SQLite)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Install
+        run: |
+          if [ -f uv.lock ]; then uv sync --locked; else
+            echo "::warning::uv.lock is missing — run 'make lock' and commit it so CI is reproducible"; uv sync; fi
+      - name: Lint (ruff)
+        run: uv run ruff check .
+      - name: Formatting (ruff format)
+        run: uv run ruff format --check .
+      - name: Types (mypy --strict)
+        run: uv run mypy
+      - name: Fast tests
+        run: uv run pytest -m 'not integration'
+
+  # ------------------------------------------------------------- PostgreSQL + migrations
+  integration:
+    name: Integration tests (PostgreSQL 16, row-level security, migrations)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: radial_pulse_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ci" --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://ci:ci@localhost:5432/radial_pulse_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Install
+        run: if [ -f uv.lock ]; then uv sync --locked; else uv sync; fi
+      - name: Migrations apply cleanly (up, down, up) and match the models
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+        run: |
+          uv run alembic upgrade head
+          uv run alembic downgrade base
+          uv run alembic upgrade head
+          uv run alembic check
+      - name: Full test suite (tenant isolation, RLS, audit trigger, migrations == models)
+        run: uv run pytest --cov=app --cov-report=term-missing:skip-covered
+
+  # ------------------------------------------------------------------- API contract
+  contract:
+    name: API contract (openapi.json is current, version bumped when it changes)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Install
+        run: if [ -f uv.lock ]; then uv sync --locked; else uv sync; fi
+      - name: openapi/openapi.json matches the code
+        run: uv run python -m app.openapi_export --check openapi/openapi.json
+      - name: A changed contract needs a new version and a CHANGELOG line
+        if: github.event_name == 'pull_request'
+        run: |
+          BASE="origin/${GITHUB_BASE_REF}"
+          if git diff --quiet "$BASE"...HEAD -- openapi/openapi.json; then
+            echo "Contract unchanged."; exit 0
+          fi
+          if ! git cat-file -e "$BASE":openapi/openapi.json 2>/dev/null; then
+            echo "First contract on this branch — no version bump needed."; exit 0
+          fi
+          version() { grep -Eo 'CONTRACT_VERSION = "[^"]+"' | cut -d'"' -f2; }
+          OLD=$(git show "$BASE":app/core/contract.py 2>/dev/null | version || true)
+          NEW=$(version < app/core/contract.py)
+          echo "Contract changed: $OLD -> $NEW"
+          if [ -n "$OLD" ] && [ "$OLD" = "$NEW" ]; then
+            echo "::error::openapi.json changed but CONTRACT_VERSION is still $NEW. Bump it (app/core/contract.py)."; exit 1
+          fi
+          if ! grep -qF "## v$NEW" openapi/CHANGELOG.md; then
+            echo "::error::Add a '## v$NEW' section to openapi/CHANGELOG.md saying what changed for the screens."; exit 1
+          fi
+      - name: Breaking changes report (information for the reviewer)
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: |
+          git show "origin/${GITHUB_BASE_REF}":openapi/openapi.json > /tmp/base.json 2>/dev/null || exit 0
+          docker run --rm -v /tmp:/base -v "$PWD/openapi":/rev tufin/oasdiff breaking /base/base.json /rev/openapi.json
+
+  # ----------------------------------------------------------------------- security
+  security:
+    name: Security (secrets · dependencies · Dockerfile)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Python dependency audit
+        run: |
+          if [ -f uv.lock ]; then uv sync --locked; else uv sync; fi
+          uv run pip-audit --strict --progress-spinner off
+      - name: Trivy — Dockerfile misconfigurations + filesystem vulnerabilities
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: fs
+          scanners: vuln,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          skip-dirs: .venv
+
+  # ------------------------------------------------------------------------- docker
+  docker:
+    name: Docker build + /health
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint Dockerfile (hadolint)
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+      - uses: docker/setup-buildx-action@v3
+      - name: Build (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: radial-pulse-api:ci
+          build-args: GIT_SHA=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Container starts and answers /health
+        run: |
+          docker run -d --name api -p 8000:8000 -e APP_ENV=local radial-pulse-api:ci
+          for i in $(seq 1 20); do curl -fsS localhost:8000/health && exit 0; sleep 1; done
+          docker logs api; exit 1
+
+  # ------------------------------------------------------------------ required gate
+  ci-ok:
+    name: CI passed
+    if: always()
+    needs: [checks, integration, contract, security, docker]
+    runs-on: ubuntu-latest
+    steps:
+      - name: All required jobs succeeded
+        run: |
+          echo '${{ toJSON(needs) }}' | jq -e 'to_entries | all(.value.result == "success")'

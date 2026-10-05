@@ -1,0 +1,17 @@
+# gitleaks configuration: default rules + project allowlist.
+title = "radial-pulse-backend"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known non-secrets"
+paths = [
+  '''uv\.lock''',
+  '''openapi/openapi\.json''',
+]
+# The throwaway passwords used ONLY by the local docker-compose postgres container.
+regexes = [
+  '''radial_local_only''',
+  '''radial_app_local_only''',
+]
