@@ -1,0 +1,86 @@
+# Publishes the internal SDK (sdk/central-client) to AWS CodeArtifact.
+#
+#   1. Bump `version` in sdk/central-client/pyproject.toml and `__version__`, merge to main.
+#   2. git tag sdk-v<version> && git push origin sdk-v<version>
+#   3. This workflow tests, builds and uploads the wheel + sdist to CodeArtifact.
+#
+# AWS access is GitHub OIDC only (no stored AWS keys). Everything AWS-specific comes from
+# repository VARIABLES set by hand (docs/infrastructure/manual-aws-setup.md, section 5):
+#   AWS_REGION, CODEARTIFACT_DOMAIN, CODEARTIFACT_DOMAIN_OWNER, CODEARTIFACT_REPOSITORY,
+#   CODEARTIFACT_PUBLISH_ROLE_ARN
+name: Publish SDK
+
+on:
+  push:
+    tags: ['sdk-v*.*.*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sdk-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The publish role trusts ONLY this GitHub environment (set it up in repo settings).
+    environment: sdk-release
+    permissions:
+      contents: read
+      id-token: write # GitHub OIDC → AWS role
+    defaults:
+      run:
+        working-directory: sdk/central-client
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: The tag is on main
+        working-directory: .
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::${GITHUB_REF_NAME} is not on main"; exit 1; }
+      - name: The AWS settings exist
+        env:
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          DOMAIN: ${{ vars.CODEARTIFACT_DOMAIN }}
+          OWNER: ${{ vars.CODEARTIFACT_DOMAIN_OWNER }}
+          REPOSITORY: ${{ vars.CODEARTIFACT_REPOSITORY }}
+          ROLE: ${{ vars.CODEARTIFACT_PUBLISH_ROLE_ARN }}
+        run: |
+          for name in AWS_REGION DOMAIN OWNER REPOSITORY ROLE; do
+            [ -n "${!name}" ] || { echo "::error::repository variable for $name is not set (see manual-aws-setup.md)"; exit 1; }
+          done
+      - name: The tag matches the package version
+        run: |
+          VERSION=$(grep -Eo '^version = "[^"]+"' pyproject.toml | cut -d'"' -f2)
+          INIT=$(grep -Eo '__version__ = "[^"]+"' src/radial_central_client/__init__.py | cut -d'"' -f2)
+          [ "sdk-v$VERSION" = "$GITHUB_REF_NAME" ] || { echo "::error::tag $GITHUB_REF_NAME but version is $VERSION"; exit 1; }
+          [ "$VERSION" = "$INIT" ] || { echo "::error::pyproject version $VERSION but __version__ is $INIT"; exit 1; }
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.12'
+      - name: Test
+        run: |
+          uv run --locked pytest
+          uv run --locked mypy
+      - name: Build
+        run: uv build
+      - name: AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.CODEARTIFACT_PUBLISH_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: gha-sdk-release
+      - name: Publish to CodeArtifact
+        env:
+          DOMAIN: ${{ vars.CODEARTIFACT_DOMAIN }}
+          OWNER: ${{ vars.CODEARTIFACT_DOMAIN_OWNER }}
+          REPOSITORY: ${{ vars.CODEARTIFACT_REPOSITORY }}
+        run: |
+          TOKEN=$(aws codeartifact get-authorization-token --domain "$DOMAIN" --domain-owner "$OWNER" \
+            --duration-seconds 900 --query authorizationToken --output text)
+          echo "::add-mask::$TOKEN"
+          ENDPOINT=$(aws codeartifact get-repository-endpoint --domain "$DOMAIN" --domain-owner "$OWNER" \
+            --repository "$REPOSITORY" --format pypi --query repositoryEndpoint --output text)
+          UV_PUBLISH_USERNAME=aws UV_PUBLISH_PASSWORD="$TOKEN" uv publish --publish-url "$ENDPOINT" dist/*

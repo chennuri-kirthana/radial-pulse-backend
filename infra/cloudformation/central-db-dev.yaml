@@ -1,0 +1,310 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Radial Pulse Central DEV - database stack. Aurora PostgreSQL 16 (private, encrypted,
+  IAM auth, SSL forced), its security groups, KMS key, managed master secret, and the
+  API Lambda execution role (VPC access + rds-db:connect for radial_api_iam only).
+  The network (VPC, subnets, NAT, S3 endpoint) is NOT created here: pass existing IDs.
+  Runbook: docs/infrastructure/central-dev-db-setup.md
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Existing Central DEV VPC.
+  DbSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: At least 2 PRIVATE subnets in 2 different AZs (no internet route).
+  EngineVersion:
+    Type: String
+    Default: "16.6"
+    AllowedPattern: '^16\.\d+$'
+    Description: Aurora PostgreSQL 16.x minor version (16.3 or newer, needed for scale to zero).
+  MinCapacity:
+    Type: Number
+    Default: 0
+    MinValue: 0
+    Description: Serverless v2 minimum ACU. 0 = pause when idle (DEV).
+  MaxCapacity:
+    Type: Number
+    Default: 2
+    MinValue: 1
+    Description: Serverless v2 maximum ACU.
+  MasterUsername:
+    Type: String
+    Default: radial
+    AllowedPattern: '^[a-z][a-z0-9_]{2,31}$'
+    Description: Owner / migration login. Password is created and kept by RDS in Secrets Manager.
+  AllowMigrationAccess:
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+    Description: Set "true" only while running migrations (opens 5432 from the migrate SG).
+  ExistingLambdaRoleName:
+    Type: String
+    Default: rp-central-lambda-execution-dev
+    Description: >-
+      The Lambda's EXISTING execution role (the mentor's). The stack only ATTACHES one policy to it
+      (VPC/ENI + rds-db:connect as radial_api_iam); it does not replace or change anything else.
+      Leave empty to let the stack create its own role (rp-central-api-lambda-role-dev) instead.
+
+Conditions:
+  MigrationAccessOn: !Equals [!Ref AllowMigrationAccess, "true"]
+  CreateLambdaRole: !Equals [!Ref ExistingLambdaRoleName, ""]
+
+Resources:
+  # ------------------------------------------------------------------ encryption
+  KmsKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: Radial Pulse Central DEV - database, secrets
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AccountAdminsUseIam
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+
+  KmsKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: alias/rp-central-dev
+      TargetKeyId: !Ref KmsKey
+
+  # ------------------------------------------------------------------ security groups
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: rp-central-api-lambda-sg-dev
+      GroupDescription: Radial Pulse API Lambda - no inbound
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - Description: HTTPS to AWS APIs and Cognito (needs NAT or VPC endpoints)
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: rp-central-api-lambda-sg-dev
+
+  DbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: rp-central-db-sg-dev
+      GroupDescription: Radial Pulse Aurora - 5432 only from the API Lambda SG
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        # A rule to localhost replaces the default "allow all" = no real outbound.
+        - Description: No outbound
+          IpProtocol: "-1"
+          CidrIp: 127.0.0.1/32
+      Tags:
+        - Key: Name
+          Value: rp-central-db-sg-dev
+
+  MigrateSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: rp-central-migrate-sg-dev
+      GroupDescription: Radial Pulse migration runner (CloudShell VPC) - no inbound
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - Description: HTTPS for AWS APIs, git, package downloads
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: rp-central-migrate-sg-dev
+
+  LambdaToDbEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref LambdaSecurityGroup
+      Description: PostgreSQL to the database
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      DestinationSecurityGroupId: !Ref DbSecurityGroup
+
+  DbFromLambdaIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref DbSecurityGroup
+      Description: PostgreSQL from the API Lambda only
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref LambdaSecurityGroup
+
+  MigrateToDbEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref MigrateSecurityGroup
+      Description: PostgreSQL to the database
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      DestinationSecurityGroupId: !Ref DbSecurityGroup
+
+  DbFromMigrateIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: MigrationAccessOn
+    Properties:
+      GroupId: !Ref DbSecurityGroup
+      Description: PostgreSQL from the migration runner (only while migrating)
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref MigrateSecurityGroup
+
+  # ------------------------------------------------------------------ database
+  DbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName: rp-central-db-subnets-dev
+      DBSubnetGroupDescription: Radial Pulse Central DEV - private DB subnets
+      SubnetIds: !Ref DbSubnetIds
+
+  DbClusterParameterGroup:
+    Type: AWS::RDS::DBClusterParameterGroup
+    Properties:
+      DBClusterParameterGroupName: rp-central-db-params-dev
+      Description: Radial Pulse Central DEV - force TLS
+      Family: aurora-postgresql16
+      Parameters:
+        rds.force_ssl: "1"
+
+  DbCluster:
+    Type: AWS::RDS::DBCluster
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBClusterIdentifier: rp-central-db-dev
+      Engine: aurora-postgresql
+      EngineVersion: !Ref EngineVersion
+      DatabaseName: radial_pulse
+      Port: 5432
+      MasterUsername: !Ref MasterUsername
+      ManageMasterUserPassword: true
+      MasterUserSecret:
+        KmsKeyId: !Ref KmsKey
+      StorageEncrypted: true
+      KmsKeyId: !GetAtt KmsKey.Arn
+      EnableIAMDatabaseAuthentication: true
+      DBSubnetGroupName: !Ref DbSubnetGroup
+      VpcSecurityGroupIds:
+        - !Ref DbSecurityGroup
+      DBClusterParameterGroupName: !Ref DbClusterParameterGroup
+      BackupRetentionPeriod: 7
+      CopyTagsToSnapshot: true
+      DeletionProtection: true
+      ServerlessV2ScalingConfiguration:
+        MinCapacity: !Ref MinCapacity
+        MaxCapacity: !Ref MaxCapacity
+        SecondsUntilAutoPause: 1800
+
+  DbInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: rp-central-db-dev-1
+      DBClusterIdentifier: !Ref DbCluster
+      DBInstanceClass: db.serverless
+      Engine: aurora-postgresql
+      PubliclyAccessible: false
+      AutoMinorVersionUpgrade: true
+
+  # ------------------------------------------------------------------ API Lambda permissions
+  # By default added to the EXISTING role (ExistingLambdaRoleName). A separate managed policy, so
+  # nothing already on that role is changed, and deleting the stack removes only this policy.
+  LambdaDbAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: rp-central-api-db-access-dev
+      Description: Radial Pulse API Lambda - run inside the VPC and log in to the DB as radial_api_iam only
+      Roles:
+        - !If [CreateLambdaRole, !Ref LambdaExecutionRole, !Ref ExistingLambdaRoleName]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: LambdaInVpcNetworkInterfaces
+            Effect: Allow
+            Action:  # same as AWS's AWSLambdaVPCAccessExecutionRole; AWS requires "*" here
+              - ec2:CreateNetworkInterface
+              - ec2:DescribeNetworkInterfaces
+              - ec2:DescribeSubnets
+              - ec2:DeleteNetworkInterface
+              - ec2:AssignPrivateIpAddresses
+              - ec2:UnassignPrivateIpAddresses
+            Resource: "*"
+          - Sid: IamDbLoginAppUserOnly
+            Effect: Allow
+            Action: rds-db:connect
+            Resource: !Sub arn:${AWS::Partition}:rds-db:${AWS::Region}:${AWS::AccountId}:dbuser:${DbCluster.DBClusterResourceId}/radial_api_iam
+
+  # Only when ExistingLambdaRoleName is empty.
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Condition: CreateLambdaRole
+    Properties:
+      RoleName: rp-central-api-lambda-role-dev
+      Description: Radial Pulse API Lambda (created because no existing role was given)
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+      ManagedPolicyArns:
+        # CloudWatch Logs (+ the same ENI actions as above)
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+
+Outputs:
+  DbEndpoint:
+    Description: Writer endpoint (DB_HOST)
+    Value: !GetAtt DbCluster.Endpoint.Address
+  DbPort:
+    Value: !GetAtt DbCluster.Endpoint.Port
+  DbName:
+    Value: radial_pulse
+  DbResourceId:
+    Description: Used in the rds-db:connect ARN
+    Value: !GetAtt DbCluster.DBClusterResourceId
+  AppDbUser:
+    Description: The API logs in as this user with IAM auth (DB_USER)
+    Value: radial_api_iam
+  MasterUsername:
+    Description: Owner / migration login only. Never used by the API.
+    Value: !Ref MasterUsername
+  MasterSecretArn:
+    Description: RDS-managed master secret. Only the migration runner reads it.
+    Value: !GetAtt DbCluster.MasterUserSecret.SecretArn
+  DbSubnetIds:
+    Value: !Join [",", !Ref DbSubnetIds]
+  LambdaSecurityGroupId:
+    Value: !Ref LambdaSecurityGroup
+  DbSecurityGroupId:
+    Value: !Ref DbSecurityGroup
+  MigrateSecurityGroupId:
+    Value: !Ref MigrateSecurityGroup
+  LambdaExecutionRoleArn:
+    Description: The role the Lambda uses (the existing one, unless the stack created its own)
+    Value: !If
+      - CreateLambdaRole
+      - !GetAtt LambdaExecutionRole.Arn
+      - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${ExistingLambdaRoleName}
+  LambdaDbAccessPolicyArn:
+    Description: The policy attached to the Lambda role (VPC/ENI + rds-db:connect as radial_api_iam)
+    Value: !Ref LambdaDbAccessPolicy
+  KmsKeyArn:
+    Value: !GetAtt KmsKey.Arn

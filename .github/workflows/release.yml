@@ -1,0 +1,50 @@
+# Publishes the API CONTRACT for the frontend.
+#
+#   1. Bump CONTRACT_VERSION (app/core/contract.py), run `make openapi`, add a
+#      "## vX.Y.Z" section to openapi/CHANGELOG.md, merge to main.
+#   2. git tag vX.Y.Z && git push origin vX.Y.Z
+#   3. This workflow checks everything matches and creates the GitHub Release
+#      "API contract vX.Y.Z" with openapi.json attached. The frontend runs `api:sync`.
+#
+# A release is ONLY the contract. Deployment is set up separately (DevOps).
+name: Release API contract
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write # create the release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: The tag is on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::${GITHUB_REF_NAME} is not on main"; exit 1; }
+      - name: The tag matches CONTRACT_VERSION
+        run: |
+          VERSION=$(grep -Eo 'CONTRACT_VERSION = "[^"]+"' app/core/contract.py | cut -d'"' -f2)
+          [ "v$VERSION" = "$GITHUB_REF_NAME" ] || { echo "::error::tag $GITHUB_REF_NAME but CONTRACT_VERSION is $VERSION"; exit 1; }
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.12'
+      - name: The committed openapi.json is exactly what the code produces
+        run: |
+          if [ -f uv.lock ]; then uv sync --locked; else uv sync; fi
+          uv run python -m app.openapi_export --check openapi/openapi.json
+      - name: Release notes from openapi/CHANGELOG.md
+        run: |
+          awk -v v="## ${GITHUB_REF_NAME}" '$0 ~ "^## " {p = ($0 == v || index($0, v " ") == 1)} p' openapi/CHANGELOG.md > notes.md
+          [ -s notes.md ] || { echo "::error::no '## ${GITHUB_REF_NAME}' section in openapi/CHANGELOG.md"; exit 1; }
+          cat notes.md
+      - name: Create the GitHub Release with openapi.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" openapi/openapi.json \
+            --title "API contract ${GITHUB_REF_NAME}" --notes-file notes.md --verify-tag

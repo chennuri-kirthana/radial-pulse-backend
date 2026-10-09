@@ -1,0 +1,63 @@
+# Local development stack: PostgreSQL + the API.
+#
+#   make db            # just the database   (= docker compose up -d postgres)
+#   make up            # + migrations and the API (:8000)
+#
+# The passwords below are for a throwaway LOCAL container only. Real environments
+# get credentials from AWS Secrets Manager / IAM database auth.
+
+name: radial-pulse-backend
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: radial
+      POSTGRES_PASSWORD: radial_local_only
+      POSTGRES_DB: radial_pulse
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/db/init-local-db.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U radial -d radial_pulse']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    build:
+      context: .
+    command: ['alembic', 'upgrade', 'head']
+    environment:
+      APP_ENV: local
+      DATABASE_URL: postgresql+psycopg://radial:radial_local_only@postgres:5432/radial_pulse
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ['api']
+
+  api:
+    build:
+      context: .
+      args:
+        GIT_SHA: local
+    env_file:
+      - path: ./.env
+        required: false
+    environment:
+      APP_ENV: local
+      DATABASE_URL: postgresql+psycopg://radial_app_local:radial_app_local_only@postgres:5432/radial_pulse
+      CORS_ALLOWED_ORIGINS: http://localhost:4200,http://localhost:5173,http://localhost:8081
+    ports:
+      - '8000:8000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    profiles: ['api']
+
+volumes:
+  pgdata:

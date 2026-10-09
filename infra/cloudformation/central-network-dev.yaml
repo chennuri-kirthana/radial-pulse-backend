@@ -1,0 +1,228 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Radial Pulse Central DEV - network stack. VPC in 2 AZs with public subnets (NAT only),
+  app subnets (Lambda, outbound through the NAT) and db subnets (no internet route),
+  one NAT gateway (DEV) and a free S3 gateway endpoint.
+  Deploy this ONLY if Central DEV has no VPC yet; otherwise pass the existing IDs to
+  central-db-dev.yaml. Runbook: docs/infrastructure/central-dev-db-setup.md
+
+Parameters:
+  VpcCidr:
+    Type: String
+    Default: 10.40.0.0/16
+    AllowedPattern: '^\d{1,3}\.\d{1,3}\.0\.0/16$'
+    Description: A /16 that does not overlap other Radial Pulse VPCs.
+
+Resources:
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true      # needed to resolve the Aurora endpoint
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: rp-central-vpc-dev
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: rp-central-igw-dev
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref InternetGateway
+
+  # ------------------------------------------------------------------ subnets (2 AZs)
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      CidrBlock: !Select [0, !Cidr [!Ref VpcCidr, 32, 8]]   # x.x.0.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: rp-central-public-a-dev
+
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      CidrBlock: !Select [1, !Cidr [!Ref VpcCidr, 32, 8]]   # x.x.1.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: rp-central-public-b-dev
+
+  AppSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      CidrBlock: !Select [10, !Cidr [!Ref VpcCidr, 32, 8]]  # x.x.10.0/24
+      Tags:
+        - Key: Name
+          Value: rp-central-app-a-dev
+
+  AppSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      CidrBlock: !Select [11, !Cidr [!Ref VpcCidr, 32, 8]]  # x.x.11.0/24
+      Tags:
+        - Key: Name
+          Value: rp-central-app-b-dev
+
+  DbSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      CidrBlock: !Select [20, !Cidr [!Ref VpcCidr, 32, 8]]  # x.x.20.0/24
+      Tags:
+        - Key: Name
+          Value: rp-central-db-a-dev
+
+  DbSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      CidrBlock: !Select [21, !Cidr [!Ref VpcCidr, 32, 8]]  # x.x.21.0/24
+      Tags:
+        - Key: Name
+          Value: rp-central-db-b-dev
+
+  # ------------------------------------------------------------------ NAT (one for DEV)
+  NatEip:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: rp-central-nat-eip-dev
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatEip.AllocationId
+      SubnetId: !Ref PublicSubnetA
+      Tags:
+        - Key: Name
+          Value: rp-central-nat-dev
+
+  # ------------------------------------------------------------------ route tables
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: rp-central-rt-public-dev
+
+  PublicDefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetARouteTable:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetA
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnetBRouteTable:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetB
+      RouteTableId: !Ref PublicRouteTable
+
+  AppRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: rp-central-rt-app-dev
+
+  AppDefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref AppRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
+  AppSubnetARouteTable:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref AppSubnetA
+      RouteTableId: !Ref AppRouteTable
+
+  AppSubnetBRouteTable:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref AppSubnetB
+      RouteTableId: !Ref AppRouteTable
+
+  # DB route table: local VPC traffic only. No internet route on purpose.
+  DbRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: rp-central-rt-db-dev
+
+  DbSubnetARouteTable:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref DbSubnetA
+      RouteTableId: !Ref DbRouteTable
+
+  DbSubnetBRouteTable:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref DbSubnetB
+      RouteTableId: !Ref DbRouteTable
+
+  # ------------------------------------------------------------------ S3 gateway endpoint (free)
+  S3GatewayEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !Ref AppRouteTable
+
+Outputs:
+  VpcId:
+    Description: Pass to central-db-dev.yaml as VpcId
+    Value: !Ref Vpc
+  DbSubnetIds:
+    Description: Pass to central-db-dev.yaml as DbSubnetIds (no internet route)
+    Value: !Join [",", [!Ref DbSubnetA, !Ref DbSubnetB]]
+  AppSubnetIds:
+    Description: Lambda VPC subnets and the CloudShell migration subnet (outbound via NAT)
+    Value: !Join [",", [!Ref AppSubnetA, !Ref AppSubnetB]]
+  PublicSubnetIds:
+    Description: NAT only. Put nothing else here.
+    Value: !Join [",", [!Ref PublicSubnetA, !Ref PublicSubnetB]]
+  NatGatewayId:
+    Value: !Ref NatGateway
+  NatPublicIp:
+    Description: Outbound IP of the Lambda (useful if a provider needs an allow-list)
+    Value: !Ref NatEip
+  S3GatewayEndpointId:
+    Value: !Ref S3GatewayEndpoint
