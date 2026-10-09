@@ -244,7 +244,8 @@ def build(uv: str, arch: str, work: Path, target: Path) -> int:
     say("5/5 Writing the ZIP")
     unzipped = write_zip(site, target)
     digest = hashlib.sha256(target.read_bytes()).hexdigest()
-    target.with_name(target.name + ".sha256").write_text(f"{digest}  {target.name}\n")
+    # LF even on Windows: `sha256sum -c` on Linux (e.g. CloudShell) rejects a CRLF line.
+    target.with_name(target.name + ".sha256").write_text(f"{digest}  {target.name}\n", newline="\n")
 
     zipped = target.stat().st_size
     say(f"\n{target.relative_to(ROOT).as_posix()}")
