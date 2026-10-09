@@ -17,9 +17,9 @@ This plan changes three earlier scaffolding choices in `docs/architecture/decisi
 |---|---|---|---|
 | B1 | **Wrong AWS account** | The local CLI uses an IAM user in an account that has no Cognito pool, no CloudFront distribution, no Central roles, no KMS keys and only the default VPC. The Cognito domain `rp-central-rp-dev` is not in that account. | Platform team: give us the Central DEV account and a role to assume |
 | B2 | **Long-lived access key** | The CLI signs in with an IAM user access key, and that user is in a group with `AdministratorAccess`. This breaks the "no long-lived keys" rule. | Use IAM Identity Center / assumed role for the DEV deploy. Do not use this key. |
-| B3 | **User pool ID not found** | The public endpoint `https://cognito-idp.ap-south-1.amazonaws.com/ap-south-1_0Blss6OwM/.well-known/openid-configuration` answers "User pool … does not exist". Similar spellings (`l`/`I`, `0`/`O`) also fail. The Managed Login domain does respond. | Copy the pool ID from the console again |
-| B4 | **Web origin does not resolve** | `d8411y8p4kdlc.cloudfront.net` has no DNS record. | Confirm the CloudFront domain |
-| B5 | **Web client ID missing** | We have the client name `rp-central-web-dev`, not its ID. The authorizer audience and `COGNITO_APP_CLIENT_IDS` need the ID. | Read it from the pool once B1 is fixed |
+| B3 | ~~User pool ID not found~~ **Resolved 10 Oct** | The ID was misspelled here (`…0Blss6OwM`, lower-case `s`). The console shows `ap-south-1_0BlsS6OwM` (upper-case `S`). Its public discovery document answers, with issuer `https://cognito-idp.ap-south-1.amazonaws.com/ap-south-1_0BlsS6OwM` and the `rp-central-rp-dev` Managed Login domain. | Done |
+| B4 | **Web origin does not resolve** | `d8411y8p4kdlc.cloudfront.net` still has no DNS record (checked 10 Oct). | Confirm the CloudFront domain |
+| B5 | ~~Web client ID missing~~ **Resolved 10 Oct** | Console: `rp-central-web-dev` = `4ic2pjdot2du6bh5srjma0n9cm` (public, no secret). Read from the console, not checked through the AWS API. | Done |
 | B6 | ~~No IaC in this repo~~ **Fixed for the database:** CloudFormation, `infra/cloudformation/central-db-dev.yaml`. Network, Lambda, API Gateway and S3 still to do. | | Section 16 |
 | B7 | **Open decisions** | #6 (separate dev/prod accounts), #13 (custom domains), #20 (who owns deploy workflows). | Team decision |
 
