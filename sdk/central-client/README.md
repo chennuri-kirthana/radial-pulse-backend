@@ -62,7 +62,7 @@ from radial_central_client import CentralApiError, CentralClient, CentralClientC
 client = CentralClient(CentralClientConfig.from_env())  # create once per process and reuse it
 
 try:
-    page = client.list_active_clinics(limit=50, offset=0)   # {"items": [...], "total": N, ...}
+    page = client.list_active_clinics(limit=50, offset=0)  # {"items": [...], "total": N, ...}
     nap = client.get_clinic_nap(page["items"][0]["clinic_id"])
 except CentralApiError as exc:
     # 401/403 from API Gateway: not signed / role not allowed (no request_id from Central)

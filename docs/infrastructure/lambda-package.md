@@ -15,7 +15,16 @@ command works on Windows, macOS and Linux.
 uv run python scripts/lambda/build_zip.py              # x86_64 Lambda
 uv run python scripts/lambda/build_zip.py --arch arm64 # arm64 (Graviton) Lambda
 make lambda-zip                                        # same as the first line
+
+# Central DEV release: same build, fixed name, then check the file
+uv run python scripts/lambda/build_zip.py --output dist/deployment/radial-pulse-api-dev-x86_64.zip
+uv run python scripts/lambda/verify_zip.py dist/deployment/radial-pulse-api-dev-x86_64.zip
 ```
+
+`verify_zip.py` reads the finished ZIP and fails if `run.sh` is missing or wrong (mode, line
+endings, start command), if tests / docs / migrations or a `.env` file, private key or AWS key id
+got in, if a compiled library is not a Linux build for the CPU and Python 3.12, if the size is over
+the limit, or if the SHA-256 does not match the `.sha256` file.
 
 What the script does:
 
@@ -51,7 +60,9 @@ cryptography/ boto3/ botocore/ jwt/ httpx/ …   runtime dependencies (+ *.dist-
 **/__pycache__/*.pyc    precompiled bytecode
 ```
 
-Size on 2026-10-08 (x86_64): 49.3 MB zipped, 125 MB unzipped.
+Size on 2026-10-10 (x86_64, v15 code): 51,558,646 bytes zipped (49.2 MiB), 124.6 MiB unzipped.
+That is only about 0.8 MiB under the direct-upload limit, so **upload through S3** (it always works,
+and a new dependency can push the file over the limit).
 
 - AWS allows 50 MB for a direct upload. Above that, upload the ZIP to S3 and point the function
   at it.

@@ -2,12 +2,13 @@
 
     uv run python scripts/lambda/build_zip.py                 # x86_64 (default)
     uv run python scripts/lambda/build_zip.py --arch arm64
+    uv run python scripts/lambda/build_zip.py --output dist/deployment/radial-pulse-api-dev-x86_64.zip
 
 Works the same on Windows, macOS and Linux. Dependencies come from ``uv.lock`` (exact versions
 and hashes, no dev tools) as **Linux wheels** for the Lambda Python 3.12 runtime (Amazon Linux
 2023, glibc 2.34), never from the machine that runs the build. Output:
 
-    dist/lambda/radial-pulse-api-<arch>.zip       the package (upload this)
+    dist/lambda/radial-pulse-api-<arch>.zip       the package (upload this; --output changes the path)
     dist/lambda/radial-pulse-api-<arch>.zip.sha256
 
 Files are staged in the system temp folder (not in the checkout, which may sit in a synced
@@ -111,6 +112,8 @@ def install_dependencies(uv: str, arch: str, work: Path, site: Path) -> None:
     )  # fmt: skip
     # Console scripts point at the build machine's Python; run.sh uses `python -m` instead.
     shutil.rmtree(site / "bin", ignore_errors=True)
+    # Empty lock marker that `uv pip install --target` leaves behind; not part of any package.
+    (site / ".lock").unlink(missing_ok=True)
     for path in [p for p in site.rglob("*") if p.suffix in BUILD_ONLY_SOURCES and p.is_file()]:
         path.unlink()
 
@@ -198,7 +201,14 @@ def main(argv: list[str] | None = None) -> int:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument("--arch", choices=sorted(PLATFORMS), default="x86_64", help="Lambda architecture")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="ZIP path, relative to the repo root (default: dist/lambda/radial-pulse-api-<arch>.zip)",
+    )
     args = parser.parse_args(argv)
+    if args.output is not None and args.output.suffix != ".zip":
+        raise SystemExit("--output must end in .zip")
 
     if sys.version_info[:2] != PYTHON_VERSION:
         raise SystemExit("Run with Python 3.12 (the Lambda runtime version): `uv run python ...`.")
@@ -210,12 +220,13 @@ def main(argv: list[str] | None = None) -> int:
     uv = find_uv()
     work = Path(tempfile.mkdtemp(prefix="radial-pulse-lambda-"))
     try:
-        return build(uv, args.arch, work)
+        target = ROOT / args.output if args.output else DIST_DIR / f"radial-pulse-api-{args.arch}.zip"
+        return build(uv, args.arch, work, target.resolve())
     finally:
         remove_tree(work)
 
 
-def build(uv: str, arch: str, work: Path) -> int:
+def build(uv: str, arch: str, work: Path, target: Path) -> int:
     site = work / "package"
     site.mkdir()
 
@@ -231,7 +242,6 @@ def build(uv: str, arch: str, work: Path) -> int:
     if failed:
         say(f"    {failed} library file(s) left as source (not valid Python 3.12; never imported)")
     say("5/5 Writing the ZIP")
-    target = DIST_DIR / f"radial-pulse-api-{arch}.zip"
     unzipped = write_zip(site, target)
     digest = hashlib.sha256(target.read_bytes()).hexdigest()
     target.with_name(target.name + ".sha256").write_text(f"{digest}  {target.name}\n")

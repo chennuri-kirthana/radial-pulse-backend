@@ -3096,6 +3096,139 @@
         "title": "ImprovementWorkItemUpdate",
         "type": "object"
       },
+      "InternalActiveClinic": {
+        "additionalProperties": false,
+        "description": "One active client clinic in the list: its id and name only.",
+        "properties": {
+          "clinic_id": {
+            "format": "uuid",
+            "title": "Clinic Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clinic_id",
+          "name"
+        ],
+        "title": "InternalActiveClinic",
+        "type": "object"
+      },
+      "InternalClinicAddress": {
+        "additionalProperties": false,
+        "description": "The clinic's postal address.\n\nFrom ``clinics.address_line`` (as ``line``), ``city``, ``state``, ``postal_code``, ``country``.",
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "country": {
+            "title": "Country",
+            "type": "string"
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          }
+        },
+        "required": [
+          "line",
+          "city",
+          "state",
+          "postal_code",
+          "country"
+        ],
+        "title": "InternalClinicAddress",
+        "type": "object"
+      },
+      "InternalClinicNap": {
+        "additionalProperties": false,
+        "description": "Name, address, phone (NAP) and website of one active client clinic. Nothing else.\n\n``website_url`` is null when the clinic has no website.",
+        "properties": {
+          "address": {
+            "$ref": "#/components/schemas/InternalClinicAddress"
+          },
+          "clinic_id": {
+            "format": "uuid",
+            "title": "Clinic Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "website_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website Url"
+          }
+        },
+        "required": [
+          "clinic_id",
+          "name",
+          "address",
+          "phone",
+          "website_url"
+        ],
+        "title": "InternalClinicNap",
+        "type": "object"
+      },
       "InternalClinicRead": {
         "additionalProperties": false,
         "description": "A clinic with its business name, for other teams' backends.",
@@ -3777,6 +3910,38 @@
           "offset"
         ],
         "title": "Page[CollaborationMessageRead]",
+        "type": "object"
+      },
+      "Page_InternalActiveClinic_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/InternalActiveClinic"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[InternalActiveClinic]",
         "type": "object"
       },
       "Page_InternalClinicRead_": {
@@ -5749,18 +5914,13 @@
         "description": "Cognito access token",
         "scheme": "bearer",
         "type": "http"
-      },
-      "ServiceBearer": {
-        "description": "Cognito access token from the OAuth 2.0 client-credentials grant (backend services only)",
-        "scheme": "bearer",
-        "type": "http"
       }
     }
   },
   "info": {
     "description": "Platform API for Radial Pulse (clinics & practitioners). Every clinic-scoped route is authorized server-side; see docs/architecture/multi-tenancy.md.",
     "title": "Radial Pulse API",
-    "version": "0.4.0"
+    "version": "0.5.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -13115,6 +13275,189 @@
         ]
       }
     },
+    "/api/v1/internal/active-clinics": {
+      "get": {
+        "operationId": "list_active_clinics_api_v1_internal_active_clinics_get",
+        "parameters": [
+          {
+            "description": "Page size",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Page size",
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Items to skip",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Items to skip",
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_InternalActiveClinic_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Invalid request (see `fields`)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Missing or invalid token"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not found, or no access to this clinic"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "How many active client clinics there are, with their ids and names",
+        "tags": [
+          "internal (backend services)"
+        ]
+      }
+    },
+    "/api/v1/internal/clinic-nap/{clinic_id}": {
+      "get": {
+        "operationId": "clinic_nap_api_v1_internal_clinic_nap__clinic_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "clinic_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Clinic Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalClinicNap"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Invalid request (see `fields`)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Missing or invalid token"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not found, or no access to this clinic"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Name, address, phone and website of one active client clinic",
+        "tags": [
+          "internal (backend services)"
+        ]
+      }
+    },
     "/api/v1/internal/clinics": {
       "get": {
         "operationId": "list_clinics_api_v1_internal_clinics_get",
@@ -13209,11 +13552,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "ServiceBearer": []
-          }
-        ],
         "summary": "List Clinics",
         "tags": [
           "internal (backend services)"
@@ -13297,11 +13635,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "ServiceBearer": []
-          }
-        ],
         "summary": "Get Clinic",
         "tags": [
           "internal (backend services)"
@@ -13389,11 +13722,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "ServiceBearer": []
-          }
-        ],
         "summary": "Online Profiles",
         "tags": [
           "internal (backend services)"
@@ -13481,11 +13809,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "ServiceBearer": []
-          }
-        ],
         "summary": "Clinic Practitioners",
         "tags": [
           "internal (backend services)"
@@ -13569,11 +13892,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "ServiceBearer": []
-          }
-        ],
         "summary": "Clinic Profile",
         "tags": [
           "internal (backend services)"
@@ -13661,11 +13979,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "ServiceBearer": []
-          }
-        ],
         "summary": "Connected Account Resources",
         "tags": [
           "internal (backend services)"
@@ -13753,11 +14066,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "ServiceBearer": []
-          }
-        ],
         "summary": "Connected Accounts",
         "tags": [
           "internal (backend services)"
@@ -13845,11 +14153,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "ServiceBearer": []
-          }
-        ],
         "summary": "Approved photos (details only)",
         "tags": [
           "internal (backend services)"
