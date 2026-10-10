@@ -19,7 +19,12 @@ aws lambda get-function-configuration --region $R --function-name $FN \
   --query "{Runtime:Runtime,Handler:Handler,Arch:Architectures,CodeSha256:CodeSha256,CodeSize:CodeSize,Memory:MemorySize,Timeout:Timeout,Role:Role,LastModified:LastModified,State:State,Vpc:VpcConfig,Layers:Layers[].Arn,Concurrency:ReservedConcurrentExecutions}" --output json
 sec "lambda environment variable NAMES and non-secret values"
 aws lambda get-function-configuration --region $R --function-name $FN --query "Environment.Variables" --output json \
-  | python3 -c 'import json,sys; d=json.load(sys.stdin) or {}; [print(f"  {k} = {\"<masked>\" if any(s in k for s in (\"SECRET\",\"PASSWORD\",\"TOKEN\",\"KEY\")) else v}") for k,v in sorted(d.items())]'
+  | python3 -c '
+import json, sys
+for k, v in sorted((json.load(sys.stdin) or {}).items()):
+    hidden = any(s in k for s in ("SECRET", "PASSWORD", "TOKEN", "KEY"))
+    print("  " + k + " = " + ("<masked>" if hidden else v))
+'
 sec "lambda resource policy (who may invoke)"; aws lambda get-policy --region $R --function-name $FN --query Policy --output text | python3 -m json.tool
 sec "lambda reserved concurrency"; aws lambda get-function-concurrency --region $R --function-name $FN --output json
 sec "execution role policies"
