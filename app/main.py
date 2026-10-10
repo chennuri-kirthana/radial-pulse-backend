@@ -5,6 +5,8 @@ Middleware order (outermost first): request context → security headers → COR
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -41,6 +43,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     register_error_handlers(app)
 
     # Added in reverse: the LAST added middleware runs FIRST.
+    if not settings.cors_allowed_origins and settings.app_env in ("dev", "prod"):
+        # Without this list there is no CORS middleware, so a browser preflight (OPTIONS) that reaches
+        # the app gets 405 and the web app cannot call the API. Behind API Gateway this happens when
+        # an OPTIONS route forwards preflights to the Lambda. Fail loudly at start, not per request.
+        logging.getLogger(__name__).warning(
+            "CORS_ALLOWED_ORIGINS is empty: browser preflight requests will be refused (405)"
+        )
     if settings.cors_allowed_origins:
         app.add_middleware(
             CORSMiddleware,
