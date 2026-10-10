@@ -20,7 +20,7 @@ pytest · AWS · Terraform · GitHub Actions · Docker · Cognito (email + passw
 | ECS Fargate + internal ALB behind API Gateway (VPC link)                                             | Long-running FastAPI with a DB pool; no servers to patch                         |
 | Aurora Serverless v2, scale-to-zero in DEV                                                           | Lowest cost for a small dev load                                                 |
 | S3 + CloudFront for the web app                                                                      | Needed to host the SPA; cheapest managed option                                  |
-| Single NAT in DEV, one per AZ in PROD                                                                | Cost vs. resilience                                                              |
+| Single NAT in DEV, one per AZ in PROD                                                                | Cost vs. resilience. **DEV revised 10 Oct 2026: no NAT at all** (`infra/cloudformation/central-network-dev.yaml`); the Lambda's internet egress is open blocker B8 in `docs/infrastructure/dev-lambda-plan.md`                                                              |
 | Region `ap-south-1` (Mumbai)                                                                         | India-only target market                                                         |
 | Invite-only users, linked on first sign-in by verified email                                         | Outbound sales model: nobody self-registers                                      |
 | 404 (not 403) when a user has no access to a clinic                                                  | Do not reveal which clinics exist                                                |

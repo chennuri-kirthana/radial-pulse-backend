@@ -14,7 +14,10 @@ What is checked:
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import json
+import logging
+import time
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -22,6 +25,7 @@ import jwt
 from jwt import PyJWKClient
 
 ALLOWED_ALGORITHMS = ["RS256"]
+logger = logging.getLogger(__name__)
 
 
 class TokenVerificationError(Exception):
@@ -53,6 +57,89 @@ class JwksSigningKeyResolver:
             return self._client.get_signing_key_from_jwt(token).key
         except jwt.PyJWKClientError as exc:
             raise TokenVerificationError(f"signing key lookup failed: {exc.__class__.__name__}") from exc
+
+
+class S3JwksSigningKeyResolver:
+    """The user pool's public keys (JWKS) from a copy in S3, for a Lambda with no internet.
+
+    Zero-NAT design: the API runs in private subnets that reach S3 through the free gateway
+    endpoint but cannot reach ``cognito-idp.<region>.amazonaws.com``. A small scheduled Lambda
+    OUTSIDE the VPC copies Cognito's JWKS document to ``s3://<bucket>/<key>`` every hour
+    (infra/cloudformation/central-jwks-sync-dev.yaml). This class reads that copy.
+
+    What stays the same: the keys are still Cognito's RSA public keys, so every signature check,
+    issuer, expiry, ``token_use`` and client-id check in ``CognitoTokenVerifier`` is unchanged.
+    A wrong or stale copy can only make valid tokens FAIL (401), never make a bad token pass.
+
+    Freshness and rotation: the set is cached for ``cache_seconds``. A token with a ``kid`` that is
+    not in the cache triggers one re-read of S3 (at most every ``min_refresh_seconds``), which is
+    how a rotated key is picked up. If S3 cannot be read and a cached set exists, the cached set is
+    kept (stale) and a warning is logged; with no cached set the token is refused.
+    """
+
+    def __init__(
+        self,
+        bucket: str,
+        key: str,
+        region: str,
+        cache_seconds: int = 3600,
+        client: Any | None = None,
+        min_refresh_seconds: int = 60,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
+        if client is None:
+            import boto3  # only the API needs it; tests pass a fake client
+
+            client = boto3.client("s3", region_name=region)
+        self._s3 = client
+        self._bucket = bucket
+        self._key = key
+        self._cache_seconds = cache_seconds
+        self._min_refresh = min_refresh_seconds
+        self._clock = clock
+        self._keys: dict[str, Any] = {}
+        self._fetched_at: float | None = None
+
+    def _fetch(self) -> dict[str, Any]:
+        body = self._s3.get_object(Bucket=self._bucket, Key=self._key)["Body"].read()
+        data = json.loads(body)
+        keys = data.get("keys") if isinstance(data, dict) else None
+        if not isinstance(keys, list) or not keys:
+            raise ValueError("JWKS document has no keys")
+        jwk_set = jwt.PyJWKSet.from_dict(data)
+        return {jwk.key_id: jwk.key for jwk in jwk_set.keys if jwk.key_id}
+
+    def _refresh(self) -> None:
+        try:
+            self._keys = self._fetch()
+        except Exception as exc:
+            if self._keys:
+                # Keep serving the last good set; the sync Lambda or S3 is the thing to fix.
+                logger.warning(
+                    "JWKS refresh from S3 failed; keeping cached keys",
+                    extra={"exc_class": exc.__class__.__name__},
+                )
+            else:
+                raise TokenVerificationError(f"signing key lookup failed: {exc.__class__.__name__}") from exc
+        self._fetched_at = self._clock()
+
+    def get_signing_key(self, token: str) -> Any:
+        try:
+            kid = jwt.get_unverified_header(token).get("kid")
+        except jwt.DecodeError as exc:
+            raise TokenVerificationError("malformed token") from exc
+        if not kid:
+            raise TokenVerificationError("signing key lookup failed: no kid")
+        now = self._clock()
+        if self._fetched_at is None or now - self._fetched_at >= self._cache_seconds:
+            self._refresh()
+        key = self._keys.get(kid)
+        if key is None and self._fetched_at is not None and now - self._fetched_at >= self._min_refresh:
+            self._refresh()  # maybe a rotated key: read S3 once more
+            key = self._keys.get(kid)
+        if key is None:
+            raise TokenVerificationError("signing key lookup failed: unknown kid")
+        return key
 
 
 class CognitoTokenVerifier:

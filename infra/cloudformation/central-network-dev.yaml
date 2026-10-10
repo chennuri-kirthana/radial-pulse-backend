@@ -1,9 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  Radial Pulse Central DEV - network stack. VPC in 2 AZs with public subnets (NAT only),
-  app subnets (Lambda, outbound through the NAT) and db subnets (no internet route),
-  one NAT gateway (DEV) and a free S3 gateway endpoint.
-  Deploy this ONLY if Central DEV has no VPC yet; otherwise pass the existing IDs to
+  Radial Pulse Central DEV - network stack, NO NAT GATEWAY (10 Oct 2026). VPC in 2 AZs with
+  app subnets (CloudShell migration runner; later the Lambda) and db subnets; neither has a
+  route to the internet. A free S3 gateway endpoint serves the app subnets. Public subnets and
+  an internet gateway exist but hold nothing (reserved for a NAT gateway if one is ever added).
+  Deploy this ONLY if Central DEV has no Radial Pulse VPC yet; otherwise pass the existing IDs to
   central-db-dev.yaml. Runbook: docs/infrastructure/central-dev-db-setup.md
 
 Parameters:
@@ -44,7 +45,7 @@ Resources:
       VpcId: !Ref Vpc
       AvailabilityZone: !Select [0, !GetAZs ""]
       CidrBlock: !Select [0, !Cidr [!Ref VpcCidr, 32, 8]]   # x.x.0.0/24
-      MapPublicIpOnLaunch: false
+      MapPublicIpOnLaunch: false   # nothing is placed here; reserved for a NAT gateway
       Tags:
         - Key: Name
           Value: rp-central-public-a-dev
@@ -100,24 +101,12 @@ Resources:
         - Key: Name
           Value: rp-central-db-b-dev
 
-  # ------------------------------------------------------------------ NAT (one for DEV)
-  NatEip:
-    Type: AWS::EC2::EIP
-    DependsOn: InternetGatewayAttachment
-    Properties:
-      Domain: vpc
-      Tags:
-        - Key: Name
-          Value: rp-central-nat-eip-dev
-
-  NatGateway:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt NatEip.AllocationId
-      SubnetId: !Ref PublicSubnetA
-      Tags:
-        - Key: Name
-          Value: rp-central-nat-dev
+  # ------------------------------------------------------------------ NO NAT gateway
+  # Decided 10 Oct 2026: no NAT gateway and no Elastic IP (about 45 USD/month saved). The app
+  # subnets therefore have NO route to the internet: only the VPC itself, the S3 gateway
+  # endpoint below, and any interface endpoints added by other stacks. A Lambda in these
+  # subnets cannot reach Cognito (JWKS, admin API, Managed Login userInfo): see
+  # docs/infrastructure/central-dev-db-setup.md, section "No NAT: what works and what does not".
 
   # ------------------------------------------------------------------ route tables
   PublicRouteTable:
@@ -156,12 +145,8 @@ Resources:
         - Key: Name
           Value: rp-central-rt-app-dev
 
-  AppDefaultRoute:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref AppRouteTable
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NatGateway
+  # App route table: local VPC traffic + the S3 gateway endpoint (added by S3GatewayEndpoint).
+  # No 0.0.0.0/0 route on purpose (no NAT).
 
   AppSubnetARouteTable:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -214,15 +199,16 @@ Outputs:
     Description: Pass to central-db-dev.yaml as DbSubnetIds (no internet route)
     Value: !Join [",", [!Ref DbSubnetA, !Ref DbSubnetB]]
   AppSubnetIds:
-    Description: Lambda VPC subnets and the CloudShell migration subnet (outbound via NAT)
+    Description: CloudShell migration subnets (and the Lambda, once it may run without internet). No internet route.
     Value: !Join [",", [!Ref AppSubnetA, !Ref AppSubnetB]]
   PublicSubnetIds:
-    Description: NAT only. Put nothing else here.
+    Description: Empty, reserved for a NAT gateway. Put nothing else here.
     Value: !Join [",", [!Ref PublicSubnetA, !Ref PublicSubnetB]]
-  NatGatewayId:
-    Value: !Ref NatGateway
-  NatPublicIp:
-    Description: Outbound IP of the Lambda (useful if a provider needs an allow-list)
-    Value: !Ref NatEip
+  AppRouteTableId:
+    Description: Route table of the app subnets (a NAT add-on stack would add its 0.0.0.0/0 route here)
+    Value: !Ref AppRouteTable
   S3GatewayEndpointId:
     Value: !Ref S3GatewayEndpoint
+  InternetEgress:
+    Description: How the app subnets reach the internet
+    Value: none (no NAT gateway; S3 through the gateway endpoint only)

@@ -22,8 +22,11 @@ This plan changes three earlier scaffolding choices in `docs/architecture/decisi
 | B5 | ~~Web client ID missing~~ **Resolved 10 Oct** | Console: `rp-central-web-dev` = `4ic2pjdot2du6bh5srjma0n9cm` (public, no secret). Read from the console, not checked through the AWS API. | Done |
 | B6 | ~~No IaC in this repo~~ **Fixed for the database:** CloudFormation, `infra/cloudformation/central-db-dev.yaml`. Network, Lambda, API Gateway and S3 still to do. | | Section 16 |
 | B7 | **Open decisions** | #6 (separate dev/prod accounts), #13 (custom domains), #20 (who owns deploy workflows). | Team decision |
+| B8 | **Lambda internet egress without a NAT (added 10 Oct)** | The Central DEV network is now built **without a NAT gateway** (`central-network-dev.yaml`, cost). A Lambda in its app subnets cannot reach Cognito: JWKS (every token → 401), `/oauth2/userInfo`, the admin API. A `cognito-idp` VPC endpoint does not help: AWS documents that a user pool **with a domain** (ours has `rp-central-rp-dev`) is incompatible with PrivateLink. The deployed Lambda therefore stays outside the VPC and cannot reach the private database. Options: NAT gateway (~45 USD/month), NAT instance (~4 USD/month), or an app change (JWKS copied to S3, no `userInfo` fallback). Details: `central-dev-db-setup.md`, "No NAT: what works and what does not". | Backend owner + Person 3 decision |
 
-Everything below assumes B1–B7 are fixed. Values shown as `<…>` are filled in from variables.
+Everything below assumes B1–B8 are fixed. Values shown as `<…>` are filled in from variables.
+**Sections 1, 4, 7 and 8 below describe the NAT-based network from 7 Oct; the network actually
+built on 10 Oct has no NAT (see B8).**
 
 ---
 

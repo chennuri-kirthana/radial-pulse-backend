@@ -25,6 +25,20 @@ def test_local_defaults_have_docs_and_no_auth() -> None:
     assert not s.auth_configured
 
 
+def test_jwks_from_s3_is_optional_and_checked() -> None:
+    assert make(**AUTH).cognito_jwks_s3 is None
+    assert make(**AUTH, cognito_jwks_s3_uri="").cognito_jwks_s3 is None
+    s = make(**AUTH, cognito_jwks_s3_uri="s3://rp-central-jwks-dev-1/cognito/ap-south-1_X/jwks.json")
+    assert s.cognito_jwks_s3 == ("rp-central-jwks-dev-1", "cognito/ap-south-1_X/jwks.json")
+    assert (
+        s.cognito_jwks_url
+        == "https://cognito-idp.ap-south-1.amazonaws.com/ap-south-1_X/.well-known/jwks.json"
+    )
+    for bad in ("https://bucket/key", "s3://bucket", "s3:///key", "bucket/key"):
+        with pytest.raises(ValidationError, match="s3://<bucket>/<key>"):
+            make(**AUTH, cognito_jwks_s3_uri=bad)
+
+
 def test_csv_env_values_are_split() -> None:
     s = make(**AUTH, cors_allowed_origins="https://a.example.com, https://b.example.com")
     assert s.cognito_app_client_ids == ["a", "b"]

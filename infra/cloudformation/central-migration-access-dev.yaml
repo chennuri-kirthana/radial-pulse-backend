@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Radial Pulse Central DEV - TEMPORARY migration access (no-NAT network, 10 Oct 2026).
+  The network has no NAT gateway, so a CloudShell VPC environment in an app subnet cannot reach
+  the public internet. The migration runner needs exactly one AWS API that is not S3: Secrets
+  Manager (to read the Aurora master password). This stack adds a Secrets Manager interface
+  endpoint (AWS PrivateLink) in ONE app subnet, reachable only from the migration security group.
+  Create it right before the migration (step 1), delete it right after (step 3): it costs about
+  0.013 USD per hour while it exists, plus a little per GB. Nothing else uses it.
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: The Radial Pulse VPC (network stack output VpcId).
+  EndpointSubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: ONE app subnet (the first of the network stack output AppSubnetIds). Use the same subnet for the CloudShell VPC environment.
+  MigrateSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Database stack output MigrateSecurityGroupId (rp-central-migrate-sg-dev). Only this group may use the endpoint.
+
+Resources:
+  EndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: rp-central-migrate-endpoint-sg-dev
+      GroupDescription: Radial Pulse migration-time Secrets Manager endpoint - 443 from the migrate SG only
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - Description: HTTPS from the migration runner (CloudShell VPC environment)
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !Ref MigrateSecurityGroupId
+      SecurityGroupEgress:
+        # A rule to localhost replaces the default "allow all" = no real outbound.
+        - Description: No outbound
+          IpProtocol: "-1"
+          CidrIp: 127.0.0.1/32
+      Tags:
+        - Key: Name
+          Value: rp-central-migrate-endpoint-sg-dev
+
+  # Private DNS makes secretsmanager.<region>.amazonaws.com resolve to this endpoint inside the
+  # VPC, so the AWS CLI works unchanged. The endpoint policy limits it to reading secrets.
+  SecretsManagerEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VpcId
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.secretsmanager
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !Ref EndpointSubnetId
+      SecurityGroupIds:
+        - !Ref EndpointSecurityGroup
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: ReadSecretsOnly
+            Effect: Allow
+            Principal: "*"
+            Action:
+              - secretsmanager:GetSecretValue
+              - secretsmanager:DescribeSecret
+            Resource: !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:rds!cluster-*
+
+Outputs:
+  SecretsManagerEndpointId:
+    Value: !Ref SecretsManagerEndpoint
+  EndpointSecurityGroupId:
+    Value: !Ref EndpointSecurityGroup
+  CostNote:
+    Value: Interface endpoint, 1 AZ - about 0.013 USD/hour while it exists. Delete this stack after the migration (step 3).

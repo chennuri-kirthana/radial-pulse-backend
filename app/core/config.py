@@ -70,6 +70,10 @@ class Settings(BaseSettings):
     cognito_app_client_ids: Annotated[list[str], NoDecode] = Field(default_factory=list)
     #: Managed Login domain (https://...). Used to call /oauth2/userInfo on first sign-in.
     cognito_domain: str | None = None
+    #: Zero-NAT Lambda (no internet): read the pool's JWKS from a copy in S3 (``s3://<bucket>/<key>``)
+    #: kept fresh by a scheduled Lambda outside the VPC (central-jwks-sync-dev.yaml). Empty = fetch
+    #: the JWKS from Cognito directly (needs internet). The token checks are the same either way.
+    cognito_jwks_s3_uri: str | None = None
     jwks_cache_seconds: int = 3600
     #: Clock skew allowance when checking exp/iat.
     jwt_leeway_seconds: int = 30
@@ -139,6 +143,19 @@ class Settings(BaseSettings):
                 raise ValueError(
                     'INTERNAL_SERVICE_ROLES must be JSON: {"<role ARN>": {"name": "...", "scopes": [...]}}'
                 ) from exc
+        return value
+
+    @field_validator("cognito_jwks_s3_uri", mode="before")
+    @classmethod
+    def _check_jwks_s3_uri(cls, value: object) -> object:
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return None
+            bucket, _, key = text.removeprefix("s3://").partition("/")
+            if not text.startswith("s3://") or not bucket or not key:
+                raise ValueError("COGNITO_JWKS_S3_URI must look like s3://<bucket>/<key>")
+            return text
         return value
 
     @model_validator(mode="after")
@@ -227,6 +244,14 @@ class Settings(BaseSettings):
     def cognito_jwks_url(self) -> str | None:
         issuer = self.cognito_issuer
         return f"{issuer}/.well-known/jwks.json" if issuer else None
+
+    @property
+    def cognito_jwks_s3(self) -> tuple[str, str] | None:
+        """(bucket, key) of the S3 copy of the JWKS, or None to read Cognito directly."""
+        if not self.cognito_jwks_s3_uri:
+            return None
+        bucket, _, key = self.cognito_jwks_s3_uri.removeprefix("s3://").partition("/")
+        return bucket, key
 
     @property
     def show_docs(self) -> bool:

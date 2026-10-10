@@ -7,6 +7,16 @@ file, and tested locally. **Nothing has been created in AWS yet**: I don't have 
 Central DEV account, so the deploy steps are yours.
 
 Full step-by-step commands: `docs/infrastructure/central-dev-db-setup.md`.
+**Quickest (10 Oct):** run the 3 scripts in `infra/deploy-dev/` (see its README) from AWS CloudShell.
+
+> **Revision 10 Oct 2026 (no NAT gateway), by Person 3's deployment prep.** `central-network-dev.yaml`
+> no longer creates a NAT gateway or Elastic IP. Item 4 below ("NAT for Cognito / JWKS") is therefore
+> **not** provided. The migration (items 6, 7, 9) still works without internet: step 1 builds an
+> offline toolkit and a temporary Secrets Manager VPC endpoint (`central-migration-access-dev.yaml`)
+> that step 3 deletes. The API Lambda cannot be placed in this VPC until a decision on its internet
+> egress is made. Read: `docs/infrastructure/central-dev-db-setup.md`, section "No NAT: what works and
+> what does not", and `infra/deploy-dev/CHANGES-no-nat.md`. Rows below that mention a NAT describe the
+> earlier design.
 
 ## Your questions, answered
 

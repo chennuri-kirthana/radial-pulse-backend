@@ -24,7 +24,13 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from app.core.errors import AppError, ConflictError, ForbiddenError, InvalidRequestError
+from app.core.errors import (
+    AppError,
+    ConflictError,
+    ForbiddenError,
+    InvalidRequestError,
+    ServiceUnavailableError,
+)
 
 INSUFFICIENT_PRIVILEGE = "42501"
 UNIQUE_VIOLATION = "23505"
@@ -68,6 +74,26 @@ def _check_field(constraint: str | None, table: str | None) -> str:
     return next((c for c in columns if rule == c or rule.startswith(c + "_")), rule)
 
 
+#: SQLSTATE class 08 = "connection exception"; 57P03 = "cannot connect now" (server starting up).
+CONNECTION_EXCEPTION_CLASS = "08"
+CANNOT_CONNECT_NOW = "57P03"
+DATABASE_UNREACHABLE_MESSAGE = "The database is not reachable right now. Please try again in a moment."
+
+
+def _is_connection_failure(orig: Any, state: str | None) -> bool:
+    """psycopg could not reach or keep a connection: wrong network path, paused Aurora, timeout.
+
+    psycopg reports these as ``OperationalError`` with no SQLSTATE (the server never answered) or
+    one of class 08 / 57P03. Other ``OperationalError`` subclasses with a SQLSTATE (serialization
+    failures, cancelled queries) are real query outcomes and stay out of this.
+    """
+    import psycopg  # the driver is a runtime dependency; imported here to keep this module import-light
+
+    if not isinstance(orig, psycopg.OperationalError):
+        return False
+    return state is None or state.startswith(CONNECTION_EXCEPTION_CLASS) or state == CANNOT_CONNECT_NOW
+
+
 def app_error_for(exc: BaseException) -> AppError | None:
     """The API error for a database exception, or None if it is not a known refusal.
 
@@ -75,6 +101,9 @@ def app_error_for(exc: BaseException) -> AppError | None:
     """
     orig: Any = getattr(exc, "orig", None) or exc
     state = _sqlstate(orig)
+    if _is_connection_failure(orig, state):
+        # 503, not 500: the request was fine, the database could not be reached (retry later).
+        return ServiceUnavailableError(DATABASE_UNREACHABLE_MESSAGE)
     if state is None:
         return None
     message = _diag(orig, "message_primary") or ""

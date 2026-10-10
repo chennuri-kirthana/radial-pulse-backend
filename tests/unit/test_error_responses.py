@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import psycopg
+import psycopg.errors
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, Field
-from sqlalchemy.exc import IntegrityError, ProgrammingError
+from sqlalchemy.exc import IntegrityError, OperationalError, ProgrammingError
 
 from app.core.error_handlers import register_error_handlers
 from app.core.errors import AccountDisabledError, ConflictError, InvalidRequestError
@@ -56,6 +58,15 @@ def make_client() -> TestClient:
             )
         if kind == "db-other":
             raise ProgrammingError("SELECT …", {}, FakeDriverError("22012"))
+        if kind == "db-unreachable":
+            # What psycopg raises when the database cannot be reached (no SQLSTATE: no server answer).
+            raise OperationalError("SELECT 1", {}, psycopg.OperationalError("connection timeout expired"))
+        if kind == "db-starting":
+            raise OperationalError(
+                "SELECT 1", {}, psycopg.errors.CannotConnectNow("the database system is starting up")
+            )
+        if kind == "db-serialization":
+            raise OperationalError("UPDATE …", {}, psycopg.errors.SerializationFailure("could not serialize"))
 
     return TestClient(app, raise_server_exceptions=False)
 
@@ -96,3 +107,15 @@ def test_database_refusals_are_mapped_and_never_leak_raw_text() -> None:
     for r in (unique, guard, other):
         assert "raw database text" not in r.text
         assert "fields" not in r.json()
+
+
+def test_unreachable_database_is_503_not_500() -> None:
+    """A Lambda that cannot reach Aurora (wrong subnets, paused cluster) must say so, not 'internal error'."""
+    client = make_client()
+    for kind in ("db-unreachable", "db-starting"):
+        r = client.get(f"/raise/{kind}")
+        assert (r.status_code, r.json()["code"]) == (503, "service_unavailable"), kind
+        assert "connection timeout" not in r.text and "starting up" not in r.text  # driver text never leaks
+    # A serialization failure is a query outcome, not a connection problem: unchanged (500).
+    other = client.get("/raise/db-serialization")
+    assert (other.status_code, other.json()["code"]) == (500, "internal_error")

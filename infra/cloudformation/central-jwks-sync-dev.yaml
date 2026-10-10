@@ -1,0 +1,191 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Radial Pulse Central DEV - JWKS sync for the zero-NAT API Lambda (10 Oct 2026).
+  The API Lambda runs in private subnets without internet and cannot download Cognito's JWKS.
+  This stack runs a tiny Lambda OUTSIDE the VPC, every hour, that copies
+  https://cognito-idp.<region>.amazonaws.com/<pool>/.well-known/jwks.json to a private S3 object.
+  The API reads that object through the free S3 gateway endpoint (setting COGNITO_JWKS_S3_URI).
+  Cost: about 720 invocations/month (free tier), one small S3 object. No NAT, no endpoints.
+  Give the API Lambda's role s3:GetObject on the object (output JwksObjectArn).
+
+Parameters:
+  UserPoolId:
+    Type: String
+    AllowedPattern: '^[a-z]{2}-[a-z]+-\d_[A-Za-z0-9]+$'
+    Description: The Cognito user pool whose keys are copied, e.g. ap-south-1_0BlsS6OwM.
+  ApiLambdaRoleArn:
+    Type: String
+    Default: ""
+    Description: >-
+      Optional. The API Lambda's execution role ARN. When set, a bucket policy lets exactly this
+      role read the JWKS object (then no change to the role's own policies is needed).
+
+Conditions:
+  GrantReader: !Not [!Equals [!Ref ApiLambdaRoleArn, ""]]
+
+Resources:
+  JwksBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub rp-central-jwks-dev-${AWS::AccountId}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      Tags:
+        - Key: Name
+          Value: rp-central-jwks-dev
+
+  JwksBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Condition: GrantReader
+    Properties:
+      Bucket: !Ref JwksBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: ApiLambdaReadsJwks
+            Effect: Allow
+            Principal:
+              AWS: !Ref ApiLambdaRoleArn
+            Action: s3:GetObject
+            Resource: !Sub ${JwksBucket.Arn}/cognito/${UserPoolId}/jwks.json
+          - Sid: TlsOnly
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !GetAtt JwksBucket.Arn
+              - !Sub ${JwksBucket.Arn}/*
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"
+
+  SyncRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: rp-central-jwks-sync-dev
+      Description: Radial Pulse - copies the Cognito JWKS to S3 (runs outside the VPC)
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+      Policies:
+        - PolicyName: jwks-sync
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: Logs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/rp-central-jwks-sync-dev:*
+              - Sid: OneObject
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource: !Sub ${JwksBucket.Arn}/cognito/${UserPoolId}/jwks.json
+
+  SyncFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: rp-central-jwks-sync-dev
+      Description: Copies the Cognito user pool JWKS to S3 for the zero-NAT API Lambda
+      Runtime: python3.12
+      Architectures: [x86_64]
+      Handler: index.handler
+      Role: !GetAtt SyncRole.Arn
+      Timeout: 30
+      MemorySize: 128
+      # No VpcConfig on purpose: this function needs the public internet (Cognito).
+      Environment:
+        Variables:
+          JWKS_URL: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolId}/.well-known/jwks.json
+          BUCKET: !Ref JwksBucket
+          KEY: !Sub cognito/${UserPoolId}/jwks.json
+      Code:
+        ZipFile: |
+          """Copy the Cognito JWKS to S3 if it changed. Refuses anything that is not a set of RS256 RSA keys."""
+          import json
+          import os
+          import urllib.request
+
+          import boto3
+
+          URL = os.environ["JWKS_URL"]
+          BUCKET = os.environ["BUCKET"]
+          KEY = os.environ["KEY"]
+          s3 = boto3.client("s3")
+
+
+          def handler(event, context):
+              with urllib.request.urlopen(URL, timeout=10) as response:
+                  body = response.read()
+              data = json.loads(body)
+              keys = data.get("keys") if isinstance(data, dict) else None
+              if not isinstance(keys, list) or not keys:
+                  raise RuntimeError("JWKS has no keys")
+              for key in keys:
+                  if key.get("kty") != "RSA" or key.get("alg") != "RS256" or not key.get("kid") or not key.get("n"):
+                      raise RuntimeError("unexpected key in JWKS")
+              try:
+                  current = json.loads(s3.get_object(Bucket=BUCKET, Key=KEY)["Body"].read())
+                  if current == data:
+                      return {"changed": False, "keys": len(keys)}
+              except s3.exceptions.NoSuchKey:
+                  pass
+              s3.put_object(
+                  Bucket=BUCKET,
+                  Key=KEY,
+                  Body=json.dumps(data).encode(),
+                  ContentType="application/json",
+                  CacheControl="max-age=300",
+              )
+              return {"changed": True, "keys": len(keys)}
+
+  HourlyRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: rp-central-jwks-sync-dev-hourly
+      Description: Refresh the JWKS copy every hour
+      ScheduleExpression: rate(1 hour)
+      State: ENABLED
+      Targets:
+        - Id: jwks-sync
+          Arn: !GetAtt SyncFunction.Arn
+
+  HourlyRulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SyncFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt HourlyRule.Arn
+
+Outputs:
+  JwksS3Uri:
+    Description: Value for the API Lambda setting COGNITO_JWKS_S3_URI
+    Value: !Sub s3://${JwksBucket}/cognito/${UserPoolId}/jwks.json
+  JwksObjectArn:
+    Description: Grant the API Lambda role s3:GetObject on this (or pass ApiLambdaRoleArn)
+    Value: !Sub ${JwksBucket.Arn}/cognito/${UserPoolId}/jwks.json
+  SyncFunctionName:
+    Description: Run it once after deploy - aws lambda invoke --function-name <this> /dev/stdout
+    Value: !Ref SyncFunction

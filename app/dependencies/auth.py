@@ -13,7 +13,13 @@ from app.core.config import get_settings
 from app.core.errors import ServiceUnavailableError, UnauthorizedError
 from app.core.logging import user_id_ctx
 from app.core.rbac import Principal
-from app.core.security import CognitoTokenVerifier, JwksSigningKeyResolver, TokenVerificationError
+from app.core.security import (
+    CognitoTokenVerifier,
+    JwksSigningKeyResolver,
+    S3JwksSigningKeyResolver,
+    SigningKeyResolver,
+    TokenVerificationError,
+)
 from app.dependencies.db import get_db
 from app.integrations.cognito import CognitoUserInfoClient, UserInfoClient
 from app.services import identity
@@ -29,10 +35,17 @@ def get_token_verifier() -> CognitoTokenVerifier:
     if not settings.auth_configured or not settings.cognito_issuer or not settings.cognito_jwks_url:
         # No fallback, no fake auth: without Cognito settings, protected endpoints are unavailable.
         raise ServiceUnavailableError("Authentication is not configured for this environment")
+    resolver: SigningKeyResolver
+    if settings.cognito_jwks_s3:
+        # Zero-NAT Lambda: the JWKS copy in S3 (see S3JwksSigningKeyResolver). Same checks after that.
+        bucket, key = settings.cognito_jwks_s3
+        resolver = S3JwksSigningKeyResolver(bucket, key, settings.aws_region, settings.jwks_cache_seconds)
+    else:
+        resolver = JwksSigningKeyResolver(settings.cognito_jwks_url, settings.jwks_cache_seconds)
     return CognitoTokenVerifier(
         issuer=settings.cognito_issuer,
         allowed_client_ids=settings.cognito_app_client_ids,
-        key_resolver=JwksSigningKeyResolver(settings.cognito_jwks_url, settings.jwks_cache_seconds),
+        key_resolver=resolver,
         leeway_seconds=settings.jwt_leeway_seconds,
     )
 
